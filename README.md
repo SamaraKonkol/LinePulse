@@ -50,6 +50,11 @@ The backend follows a layered flow for the main domains:
 Controller -> Service -> Repository -> PostgreSQL
 ```
 
+## Documentation
+
+- [Architecture decisions and technical flows](docs/architecture.md)
+- [Domain model and lifecycle rules](docs/domain-model.md)
+
 ## Roles
 
 - `ADMIN` — administrative access, machine registration and operational management
