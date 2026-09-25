@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { Activity, AlertTriangle, Factory, Wrench } from 'lucide-react';
-import { getDashboardMetrics, getIncidents } from './services/api';
-import type { IncidentPriority } from './types/api';
+import { Activity, AlertTriangle, Factory, LogOut, Wrench } from 'lucide-react';
+import { useState } from 'react';
+import LoginPage from './LoginPage';
+import { clearAuth, getDashboardMetrics, getIncidents, getStoredAuth } from './services/api';
+import type { AuthResponse, IncidentPriority } from './types/api';
 
 const priorityMeta: Record<IncidentPriority, { label: string; className: string }> = {
   CRITICAL: { label: 'Crítica', className: 'critical' },
@@ -10,16 +12,15 @@ const priorityMeta: Record<IncidentPriority, { label: string; className: string 
   LOW: { label: 'Baixa', className: 'neutral' },
 };
 
-function App() {
-  const dashboardQuery = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: getDashboardMetrics,
-  });
-  const incidentsQuery = useQuery({
-    queryKey: ['incidents'],
-    queryFn: getIncidents,
-  });
+const roleLabel = {
+  ADMIN: 'Administrador',
+  TECHNICIAN: 'Técnico',
+  OPERATOR: 'Operador',
+};
 
+function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => void }) {
+  const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: getDashboardMetrics });
+  const incidentsQuery = useQuery({ queryKey: ['incidents'], queryFn: getIncidents });
   const dashboard = dashboardQuery.data;
   const availability = dashboard?.availabilityPercentage ?? 0;
   const recentIncidents = (incidentsQuery.data ?? [])
@@ -43,6 +44,11 @@ function App() {
           <a className="nav-item" href="#incidents">Ocorrências</a>
           <a className="nav-item" href="#maintenance">Manutenção</a>
         </nav>
+        <div className="sidebar-user">
+          <strong>{auth.user.name}</strong>
+          <span>{roleLabel[auth.user.role]}</span>
+          <button type="button" onClick={onLogout}><LogOut size={15} /> Sair</button>
+        </div>
       </aside>
 
       <section className="content">
@@ -56,9 +62,7 @@ function App() {
         </header>
 
         {hasConnectionError && (
-          <div className="connection-banner">
-            Não foi possível carregar os dados da API. Verifique se o backend está disponível.
-          </div>
+          <div className="connection-banner">Não foi possível carregar os dados da API.</div>
         )}
 
         <div className="metrics-grid">
@@ -113,6 +117,21 @@ function App() {
       </section>
     </main>
   );
+}
+
+function App() {
+  const [auth, setAuth] = useState<AuthResponse | null>(() => getStoredAuth());
+
+  function logout() {
+    clearAuth();
+    setAuth(null);
+  }
+
+  if (!auth) {
+    return <LoginPage onAuthenticated={setAuth} />;
+  }
+
+  return <Dashboard auth={auth} onLogout={logout} />;
 }
 
 export default App;
