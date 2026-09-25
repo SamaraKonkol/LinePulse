@@ -8,6 +8,7 @@ export interface DashboardMetrics {
 
 export type IncidentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CANCELLED';
+export type UserRole = 'ADMIN' | 'TECHNICIAN' | 'OPERATOR';
 
 export interface Incident {
   id: string;
@@ -20,4 +21,16 @@ export interface Incident {
   status: IncidentStatus;
   occurredAt: string;
   createdAt: string;
+}
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
 }
