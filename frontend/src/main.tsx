@@ -26,6 +26,8 @@ favicon.type = 'image/webp';
 favicon.href = iconLogo;
 if (!favicon.parentNode) document.head.appendChild(favicon);
 
+document.documentElement.style.setProperty('--lp-icon-image', `url("${iconLogo}")`);
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
