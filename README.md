@@ -23,6 +23,7 @@ Industrial maintenance and operations platform for managing production assets, i
 - Vite
 - TanStack Query
 - Axios
+- Recharts
 - Lucide React
 - Nginx
 
@@ -31,22 +32,28 @@ Industrial maintenance and operations platform for managing production assets, i
 - Docker Compose
 - GitHub Actions
 
-## MVP scope
+## Architecture
 
-- Authentication with role-based access
-- Plants, sectors and production lines
-- Machine registry and operational status
-- Incident management
-- Maintenance work orders
-- Downtime tracking
-- Operational dashboard
-- API error handling
-- Responsive industrial UI
+```mermaid
+flowchart LR
+    WEB[React + TypeScript] -->|REST + JWT| API[Spring Boot API]
+    API --> DB[(PostgreSQL)]
+    API --> AUDIT[Audit trail]
+    FLYWAY[Flyway migrations] --> DB
+    CI[GitHub Actions] --> TESTS[Backend tests]
+    CI --> BUILD[Frontend + Docker builds]
+```
+
+The backend follows a layered flow for the main domains:
+
+```text
+Controller -> Service -> Repository -> PostgreSQL
+```
 
 ## Roles
 
-- `ADMIN` — administrative access and machine registration
-- `TECHNICIAN` — maintenance operations and machine status management
+- `ADMIN` — administrative access, machine registration and operational management
+- `TECHNICIAN` — maintenance operations, incident handling and machine status management
 - `OPERATOR` — operational access and incident reporting
 
 ## Current features
@@ -54,16 +61,20 @@ Industrial maintenance and operations platform for managing production assets, i
 - User registration and login with BCrypt password hashing and JWT
 - Role-based API authorization
 - Machine listing and operational status updates
-- Incident registration from the dashboard
-- Maintenance work order creation and lifecycle transitions
-- Downtime registration and closing from the dashboard
+- Incident creation and lifecycle: open, in progress, resolved and cancelled
+- Searchable incident history with status and priority filters
+- Maintenance work order creation, start and completion lifecycle
+- Downtime registration and closing
 - Availability calculation using real downtime intervals
 - MTTR calculation using completed maintenance orders from the last 30 days
+- Seven-day incident trend chart backed by API data
+- Persistent audit trail with authenticated actor and timestamp
+- Recent operational activity feed for technician and admin roles
 - PostgreSQL schema managed with Flyway migrations
 - OpenAPI documentation with Bearer JWT authentication
-- Unit tests for maintenance lifecycle and dashboard indicators
+- Unit tests for maintenance and incident lifecycle rules and dashboard indicators
 - Responsive React interface
-- CI pipeline validating backend tests and frontend builds
+- CI pipeline validating backend tests, frontend build and Docker Compose build
 - Full local stack with Docker Compose
 
 ## Project structure
@@ -73,6 +84,7 @@ LinePulse/
 ├── backend/
 │   ├── src/main/java/com/linepulse/
 │   │   ├── asset/
+│   │   ├── audit/
 │   │   ├── auth/
 │   │   ├── common/
 │   │   ├── config/
@@ -105,6 +117,18 @@ API: http://localhost:8080/api
 Swagger: http://localhost:8080/swagger-ui/index.html
 PostgreSQL: localhost:5432
 ```
+
+### Demo users
+
+Docker Compose enables local demo users automatically:
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@linepulse.local` | `LinePulse123!` |
+| Technician | `technician@linepulse.local` | `LinePulse123!` |
+| Operator | `operator@linepulse.local` | `LinePulse123!` |
+
+Demo user creation is disabled by default outside the Docker development configuration. Do not enable demo users with public credentials in a production environment.
 
 Stop the stack with:
 
@@ -141,6 +165,13 @@ npm install
 npm run dev
 ```
 
+To enable the three demo users when running the backend manually, define:
+
+```text
+DEMO_USERS_ENABLED=true
+DEMO_USERS_PASSWORD=LinePulse123!
+```
+
 ## API documentation
 
 With the backend running locally:
@@ -169,26 +200,33 @@ JWT_SECRET
 CORS_ALLOWED_ORIGINS
 ```
 
+Optional development variables:
+
+```text
+DEMO_USERS_ENABLED
+DEMO_USERS_PASSWORD
+JWT_EXPIRATION_MINUTES
+```
+
 Frontend:
 
 ```text
 VITE_API_URL
 ```
 
-The Docker Compose configuration uses local development defaults and supports overriding `JWT_SECRET` and `VITE_API_URL` through environment variables.
+The Docker Compose configuration uses local development defaults and supports overriding `JWT_SECRET`, `DEMO_USERS_PASSWORD` and `VITE_API_URL` through environment variables.
 
 ## Roadmap
 
-- Incident and maintenance history views
-- More service and integration tests
-- Audit history
-- Operational charts and trend analysis
+- Maintenance history with advanced filters
+- Additional service and integration tests
+- Operational alerts and notification rules
 - AI-assisted incident classification
 - Production deployment
 
 ## Status
 
-MVP in active development.
+Functional MVP in active development.
 
 ## Author
 

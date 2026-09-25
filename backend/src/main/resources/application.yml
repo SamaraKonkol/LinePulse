@@ -21,3 +21,6 @@ app:
   jwt:
     secret: ${JWT_SECRET:linepulse-local-development-secret-change-me}
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
+  demo-users:
+    enabled: ${DEMO_USERS_ENABLED:false}
+    password: ${DEMO_USERS_PASSWORD:LinePulse123!}
