@@ -1,0 +1,108 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(17, 27, 21, .42);
+}
+
+.modal-card {
+  width: min(620px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #dce5df;
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(17, 32, 24, .18);
+  padding: 24px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.modal-header h2 {
+  margin: 5px 0 0;
+  font-size: 24px;
+  letter-spacing: -.025em;
+}
+
+.modal-close {
+  border: 0;
+  background: transparent;
+  color: #758079;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.incident-form {
+  display: grid;
+  gap: 15px;
+}
+
+.incident-form label {
+  display: grid;
+  gap: 7px;
+  color: #344139;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.incident-form input,
+.incident-form select,
+.incident-form textarea {
+  width: 100%;
+  border: 1px solid #ccd7cf;
+  border-radius: 8px;
+  background: #fff;
+  padding: 11px 12px;
+  color: #17201b;
+  outline: none;
+  font: inherit;
+}
+
+.incident-form textarea {
+  resize: vertical;
+  min-height: 110px;
+}
+
+.incident-form input:focus,
+.incident-form select:focus,
+.incident-form textarea:focus {
+  border-color: #166534;
+  box-shadow: 0 0 0 3px #e5f3e8;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.secondary-button {
+  border: 1px solid #ccd7cf;
+  border-radius: 8px;
+  padding: 10px 15px;
+  background: #fff;
+  color: #344139;
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  background: #f5f8f6;
+}
+
+@media (max-width: 640px) {
+  .modal-backdrop { padding: 12px; }
+  .modal-card { padding: 20px; }
+  .modal-actions { flex-direction: column-reverse; }
+  .modal-actions button { width: 100%; }
+}
