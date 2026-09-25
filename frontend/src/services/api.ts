@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, IncidentTrendPoint, Machine, MachineStatus, WorkOrder } from '../types/api';
+import type { AuditEvent, AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, IncidentTrendPoint, Machine, MachineStatus, WorkOrder } from '../types/api';
 
 const AUTH_STORAGE_KEY = 'linepulse-auth';
 
@@ -51,28 +51,13 @@ export async function getIncidentTrend() {
   return response.data;
 }
 
+export async function getAuditEvents() {
+  const response = await api.get<AuditEvent[]>('/audit-events');
+  return response.data;
+}
+
 export async function getIncidents() {
   const response = await api.get<Incident[]>('/incidents');
-  return response.data;
-}
-
-export async function createIncident(input: CreateIncidentInput) {
-  const response = await api.post<Incident>('/incidents', input);
-  return response.data;
-}
-
-export async function startIncident(id: string) {
-  const response = await api.patch<Incident>(`/incidents/${id}/start`);
-  return response.data;
-}
-
-export async function resolveIncident(id: string) {
-  const response = await api.patch<Incident>(`/incidents/${id}/resolve`);
-  return response.data;
-}
-
-export async function cancelIncident(id: string) {
-  const response = await api.patch<Incident>(`/incidents/${id}/cancel`);
   return response.data;
 }
 
@@ -83,6 +68,26 @@ export async function getMachines() {
 
 export async function updateMachineStatus(machineId: string, status: MachineStatus) {
   const response = await api.patch<Machine>(`/machines/${machineId}/status`, { status });
+  return response.data;
+}
+
+export async function createIncident(input: CreateIncidentInput) {
+  const response = await api.post<Incident>('/incidents', input);
+  return response.data;
+}
+
+export async function startIncident(id: string) {
+  const response = await api.patch<Incident>(`/incidents/${id}/start`, {});
+  return response.data;
+}
+
+export async function resolveIncident(id: string) {
+  const response = await api.patch<Incident>(`/incidents/${id}/resolve`, {});
+  return response.data;
+}
+
+export async function cancelIncident(id: string) {
+  const response = await api.patch<Incident>(`/incidents/${id}/cancel`, {});
   return response.data;
 }
 

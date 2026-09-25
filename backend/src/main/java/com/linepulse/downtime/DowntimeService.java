@@ -2,6 +2,7 @@ package com.linepulse.downtime;
 
 import com.linepulse.asset.Machine;
 import com.linepulse.asset.MachineRepository;
+import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
 import com.linepulse.incident.Incident;
@@ -17,11 +18,13 @@ public class DowntimeService {
     private final DowntimeRepository downtimeRepository;
     private final MachineRepository machineRepository;
     private final IncidentRepository incidentRepository;
+    private final AuditService auditService;
 
-    public DowntimeService(DowntimeRepository downtimeRepository, MachineRepository machineRepository, IncidentRepository incidentRepository) {
+    public DowntimeService(DowntimeRepository downtimeRepository, MachineRepository machineRepository, IncidentRepository incidentRepository, AuditService auditService) {
         this.downtimeRepository = downtimeRepository;
         this.machineRepository = machineRepository;
         this.incidentRepository = incidentRepository;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -45,7 +48,9 @@ public class DowntimeService {
                 request.startedAt() == null ? now : request.startedAt(),
                 now
         );
-        return DowntimeResponse.from(downtimeRepository.save(downtime));
+        Downtime saved = downtimeRepository.save(downtime);
+        auditService.record("DOWNTIME_STARTED", "DOWNTIME", saved.getId(), "Parada registrada em " + machine.getAssetCode());
+        return DowntimeResponse.from(saved);
     }
 
     @Transactional
@@ -60,7 +65,9 @@ public class DowntimeService {
             throw new IllegalArgumentException("Downtime end must be after start");
         }
         downtime.close(endedAt);
-        return DowntimeResponse.from(downtimeRepository.save(downtime));
+        Downtime saved = downtimeRepository.save(downtime);
+        auditService.record("DOWNTIME_CLOSED", "DOWNTIME", saved.getId(), "Parada encerrada em " + saved.getMachine().getAssetCode());
+        return DowntimeResponse.from(saved);
     }
 
     private Incident resolveIncident(UUID incidentId, Machine machine) {

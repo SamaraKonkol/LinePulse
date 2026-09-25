@@ -2,6 +2,7 @@ package com.linepulse.maintenance;
 
 import com.linepulse.asset.Machine;
 import com.linepulse.asset.MachineRepository;
+import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
 import com.linepulse.incident.Incident;
@@ -17,11 +18,13 @@ public class WorkOrderService {
     private final WorkOrderRepository workOrderRepository;
     private final MachineRepository machineRepository;
     private final IncidentRepository incidentRepository;
+    private final AuditService auditService;
 
-    public WorkOrderService(WorkOrderRepository workOrderRepository, MachineRepository machineRepository, IncidentRepository incidentRepository) {
+    public WorkOrderService(WorkOrderRepository workOrderRepository, MachineRepository machineRepository, IncidentRepository incidentRepository, AuditService auditService) {
         this.workOrderRepository = workOrderRepository;
         this.machineRepository = machineRepository;
         this.incidentRepository = incidentRepository;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -50,7 +53,9 @@ public class WorkOrderService {
                 now,
                 now
         );
-        return WorkOrderResponse.from(workOrderRepository.save(workOrder));
+        WorkOrder saved = workOrderRepository.save(workOrder);
+        auditService.record("WORK_ORDER_CREATED", "WORK_ORDER", saved.getId(), "Ordem criada para " + machine.getAssetCode() + ": " + saved.getTitle());
+        return WorkOrderResponse.from(saved);
     }
 
     @Transactional
@@ -60,6 +65,7 @@ public class WorkOrderService {
             throw new ConflictException("Only open work orders can be started");
         }
         workOrder.start(Instant.now());
+        auditService.record("WORK_ORDER_STARTED", "WORK_ORDER", workOrder.getId(), "Ordem iniciada em " + workOrder.getMachine().getAssetCode());
         return WorkOrderResponse.from(workOrder);
     }
 
@@ -70,6 +76,7 @@ public class WorkOrderService {
             throw new ConflictException("Only work orders in progress can be completed");
         }
         workOrder.complete(Instant.now());
+        auditService.record("WORK_ORDER_COMPLETED", "WORK_ORDER", workOrder.getId(), "Ordem concluída em " + workOrder.getMachine().getAssetCode());
         return WorkOrderResponse.from(workOrder);
     }
 

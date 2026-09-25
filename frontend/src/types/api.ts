@@ -75,6 +75,16 @@ export interface Downtime {
   createdAt: string;
 }
 
+export interface AuditEvent {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  description: string;
+  actorEmail: string;
+  createdAt: string;
+}
+
 export interface CreateIncidentInput {
   machineId: string;
   title: string;
