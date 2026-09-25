@@ -1,0 +1,68 @@
+.machines-panel {
+  margin-top: 16px;
+}
+
+.machine-count {
+  color: #758079;
+  font-size: 13px;
+}
+
+.machine-table-wrap {
+  overflow-x: auto;
+}
+
+.machine-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.machine-table th,
+.machine-table td {
+  padding: 13px 10px;
+  border-top: 1px solid #edf1ee;
+  text-align: left;
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.machine-table th {
+  color: #758079;
+  font-weight: 700;
+}
+
+.machine-table td:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.machine-table td:first-child span {
+  color: #758079;
+}
+
+.machine-status,
+.machine-status-label {
+  display: inline-flex;
+  align-items: center;
+  min-width: 110px;
+  border-radius: 999px;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.machine-status {
+  cursor: pointer;
+  outline: none;
+}
+
+.status-running { background: #edf7f0; color: #166534; border-color: #cfe7d5; }
+.status-stopped { background: #fff1f1; color: #991b1b; border-color: #f5caca; }
+.status-maintenance { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+.status-inactive { background: #f3f4f6; color: #4b5563; border-color: #e5e7eb; }
+
+.inline-error {
+  margin-top: 12px;
+  color: #9b2424;
+  font-size: 13px;
+}
