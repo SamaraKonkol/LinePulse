@@ -1,0 +1,147 @@
+.incident-history-panel {
+  margin-top: 16px;
+}
+
+.incident-history-heading {
+  align-items: flex-start;
+}
+
+.incident-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 180px 180px;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.incident-filters input,
+.incident-filters select {
+  width: 100%;
+  border: 1px solid #dce5df;
+  border-radius: 9px;
+  background: #fff;
+  color: #17201b;
+  font: inherit;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.incident-filters input:focus,
+.incident-filters select:focus {
+  border-color: #166534;
+  box-shadow: 0 0 0 3px rgba(22, 101, 52, 0.08);
+}
+
+.incident-history-list {
+  display: grid;
+}
+
+.incident-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 0;
+  border-top: 1px solid #edf1ee;
+}
+
+.incident-history-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.incident-history-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.incident-history-copy span:not(.incident-status) {
+  color: #39443d;
+}
+
+.incident-history-copy small {
+  color: #758079;
+}
+
+.incident-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.incident-status.open {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.incident-status.in_progress {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.incident-status.resolved {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.incident-status.cancelled {
+  background: #f4f4f5;
+  color: #52525b;
+}
+
+.incident-history-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.incident-history-actions button {
+  border: 1px solid #dce5df;
+  border-radius: 8px;
+  background: #fff;
+  color: #14532d;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 10px;
+}
+
+.incident-history-actions button:hover:not(:disabled) {
+  background: #f7faf8;
+}
+
+.incident-history-actions button.resolve {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.incident-history-actions button.cancel {
+  color: #7f1d1d;
+}
+
+.incident-history-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+@media (max-width: 780px) {
+  .incident-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .incident-history-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .incident-history-actions {
+    flex-wrap: wrap;
+  }
+}
