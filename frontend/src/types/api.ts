@@ -10,6 +10,9 @@ export type IncidentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CANCELLED';
 export type UserRole = 'ADMIN' | 'TECHNICIAN' | 'OPERATOR';
 export type MachineStatus = 'RUNNING' | 'STOPPED' | 'MAINTENANCE' | 'INACTIVE';
+export type MaintenanceType = 'CORRECTIVE' | 'PREVENTIVE' | 'INSPECTION';
+export type WorkOrderPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type WorkOrderStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
 export interface Incident {
   id: string;
@@ -37,12 +40,39 @@ export interface Machine {
   installedAt: string | null;
 }
 
+export interface WorkOrder {
+  id: string;
+  machineId: string;
+  assetCode: string;
+  machineName: string;
+  incidentId: string | null;
+  title: string;
+  description: string;
+  type: MaintenanceType;
+  priority: WorkOrderPriority;
+  status: WorkOrderStatus;
+  scheduledFor: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+}
+
 export interface CreateIncidentInput {
   machineId: string;
   title: string;
   description: string;
   priority: IncidentPriority;
   occurredAt?: string;
+}
+
+export interface CreateWorkOrderInput {
+  machineId: string;
+  incidentId?: string;
+  title: string;
+  description: string;
+  type: MaintenanceType;
+  priority: WorkOrderPriority;
+  scheduledFor?: string;
 }
 
 export interface AuthUser {
