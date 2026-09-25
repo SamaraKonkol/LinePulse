@@ -47,4 +47,12 @@ public class MachineService {
         );
         return MachineResponse.from(machineRepository.save(machine));
     }
+
+    @Transactional
+    public MachineResponse updateStatus(UUID machineId, UpdateMachineStatusRequest request) {
+        Machine machine = machineRepository.findById(machineId)
+                .orElseThrow(() -> new NotFoundException("Machine not found"));
+        machine.changeStatus(request.status());
+        return MachineResponse.from(machine);
+    }
 }
