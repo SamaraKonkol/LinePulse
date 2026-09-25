@@ -6,6 +6,7 @@ import './styles.css';
 import './work-orders.css';
 import './incident-history.css';
 import './maintenance-history.css';
+import './alerts.css';
 import './audit.css';
 
 const queryClient = new QueryClient({
