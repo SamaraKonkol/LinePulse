@@ -18,3 +18,6 @@ server:
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  jwt:
+    secret: ${JWT_SECRET:linepulse-local-development-secret-change-me}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
