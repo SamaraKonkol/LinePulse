@@ -58,9 +58,17 @@ LinePulse/
 └── docker-compose.yml
 ```
 
+## Current progress
+
+- Project foundation
+- PostgreSQL schema and migrations
+- Machine management API
+- Structured API error handling
+- Incident management API
+
 ## Status
 
-Foundation in development.
+MVP in active development.
 
 ## Author
 
