@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles.css';
 import './work-orders.css';
+import './incident-history.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -56,6 +56,26 @@ export async function getIncidents() {
   return response.data;
 }
 
+export async function createIncident(input: CreateIncidentInput) {
+  const response = await api.post<Incident>('/incidents', input);
+  return response.data;
+}
+
+export async function startIncident(id: string) {
+  const response = await api.patch<Incident>(`/incidents/${id}/start`);
+  return response.data;
+}
+
+export async function resolveIncident(id: string) {
+  const response = await api.patch<Incident>(`/incidents/${id}/resolve`);
+  return response.data;
+}
+
+export async function cancelIncident(id: string) {
+  const response = await api.patch<Incident>(`/incidents/${id}/cancel`);
+  return response.data;
+}
+
 export async function getMachines() {
   const response = await api.get<Machine[]>('/machines');
   return response.data;
@@ -63,11 +83,6 @@ export async function getMachines() {
 
 export async function updateMachineStatus(machineId: string, status: MachineStatus) {
   const response = await api.patch<Machine>(`/machines/${machineId}/status`, { status });
-  return response.data;
-}
-
-export async function createIncident(input: CreateIncidentInput) {
-  const response = await api.post<Incident>('/incidents', input);
   return response.data;
 }
 

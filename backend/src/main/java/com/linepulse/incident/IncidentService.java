@@ -2,6 +2,7 @@ package com.linepulse.incident;
 
 import com.linepulse.asset.Machine;
 import com.linepulse.asset.MachineRepository;
+import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
 import java.time.Instant;
 import java.util.List;
@@ -43,5 +44,40 @@ public class IncidentService {
                 now
         );
         return IncidentResponse.from(incidentRepository.save(incident));
+    }
+
+    @Transactional
+    public IncidentResponse start(UUID id) {
+        Incident incident = findIncident(id);
+        if (!IncidentLifecycle.canStart(incident.getStatus())) {
+            throw new ConflictException("Only open incidents can be started");
+        }
+        incident.start(Instant.now());
+        return IncidentResponse.from(incidentRepository.save(incident));
+    }
+
+    @Transactional
+    public IncidentResponse resolve(UUID id) {
+        Incident incident = findIncident(id);
+        if (!IncidentLifecycle.canResolve(incident.getStatus())) {
+            throw new ConflictException("Only incidents in progress can be resolved");
+        }
+        incident.resolve(Instant.now());
+        return IncidentResponse.from(incidentRepository.save(incident));
+    }
+
+    @Transactional
+    public IncidentResponse cancel(UUID id) {
+        Incident incident = findIncident(id);
+        if (!IncidentLifecycle.canCancel(incident.getStatus())) {
+            throw new ConflictException("Only active incidents can be cancelled");
+        }
+        incident.cancel(Instant.now());
+        return IncidentResponse.from(incidentRepository.save(incident));
+    }
+
+    private Incident findIncident(UUID id) {
+        return incidentRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Incident not found"));
     }
 }

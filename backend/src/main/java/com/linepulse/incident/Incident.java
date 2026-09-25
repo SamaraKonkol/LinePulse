@@ -50,35 +50,27 @@ public class Incident {
         this.updatedAt = updatedAt;
     }
 
-    public UUID getId() {
-        return id;
+    public void start(Instant at) {
+        this.status = IncidentStatus.IN_PROGRESS;
+        this.updatedAt = at;
     }
 
-    public Machine getMachine() {
-        return machine;
+    public void resolve(Instant at) {
+        this.status = IncidentStatus.RESOLVED;
+        this.updatedAt = at;
     }
 
-    public String getTitle() {
-        return title;
+    public void cancel(Instant at) {
+        this.status = IncidentStatus.CANCELLED;
+        this.updatedAt = at;
     }
 
-    public String getDescription() {
-        return description;
-    }
-
-    public IncidentPriority getPriority() {
-        return priority;
-    }
-
-    public IncidentStatus getStatus() {
-        return status;
-    }
-
-    public Instant getOccurredAt() {
-        return occurredAt;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
+    public UUID getId() { return id; }
+    public Machine getMachine() { return machine; }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public IncidentPriority getPriority() { return priority; }
+    public IncidentStatus getStatus() { return status; }
+    public Instant getOccurredAt() { return occurredAt; }
+    public Instant getCreatedAt() { return createdAt; }
 }
