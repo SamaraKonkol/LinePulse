@@ -2,6 +2,7 @@ package com.linepulse.dashboard;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -41,7 +42,7 @@ class DashboardServiceTest {
         when(machineRepository.countByStatus(MachineStatus.RUNNING)).thenReturn(1L);
         when(incidentRepository.countByStatusIn(List.of(IncidentStatus.OPEN, IncidentStatus.IN_PROGRESS))).thenReturn(0L);
         when(workOrderRepository.countByStatusIn(List.of(WorkOrderStatus.OPEN, WorkOrderStatus.IN_PROGRESS))).thenReturn(0L);
-        when(workOrderRepository.findByStatusAndCompletedAtAfter(WorkOrderStatus.COMPLETED, any(Instant.class))).thenReturn(List.of(order));
+        when(workOrderRepository.findByStatusAndCompletedAtAfter(eq(WorkOrderStatus.COMPLETED), any(Instant.class))).thenReturn(List.of(order));
         when(downtimeRepository.findOverlapping(any(Instant.class), any(Instant.class))).thenReturn(List.of());
 
         DashboardMetrics metrics = service.getMetrics();
