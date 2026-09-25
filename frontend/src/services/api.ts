@@ -1,10 +1,50 @@
 import axios from 'axios';
-import type { DashboardMetrics, Incident } from '../types/api';
+import type { AuthResponse, DashboardMetrics, Incident } from '../types/api';
+
+const AUTH_STORAGE_KEY = 'linepulse-auth';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api',
   timeout: 8000,
 });
+
+api.interceptors.request.use((config) => {
+  const session = getStoredAuth();
+  if (session?.token) {
+    config.headers.Authorization = `Bearer ${session.token}`;
+  }
+  return config;
+});
+
+export function getStoredAuth(): AuthResponse | null {
+  const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as AuthResponse;
+  } catch {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    return null;
+  }
+}
+
+export function storeAuth(auth: AuthResponse) {
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+}
+
+export function clearAuth() {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+}
+
+export async function login(email: string, password: string) {
+  const response = await api.post<AuthResponse>('/auth/login', { email, password });
+  return response.data;
+}
+
+export async function register(name: string, email: string, password: string) {
+  const response = await api.post<AuthResponse>('/auth/register', { name, email, password });
+  return response.data;
+}
 
 export async function getDashboardMetrics() {
   const response = await api.get<DashboardMetrics>('/dashboard');
