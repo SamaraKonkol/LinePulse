@@ -1,0 +1,21 @@
+.trend-panel {
+  margin-top: 16px;
+}
+
+.trend-total {
+  color: #758079;
+  font-size: 13px;
+}
+
+.chart-container {
+  height: 250px;
+  margin-top: 8px;
+}
+
+.chart-loading {
+  height: 250px;
+  display: grid;
+  place-items: center;
+  color: #758079;
+  font-size: 14px;
+}

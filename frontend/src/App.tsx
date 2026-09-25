@@ -4,10 +4,11 @@ import { useState } from 'react';
 import DowntimeModal from './DowntimeModal';
 import DowntimePanel from './DowntimePanel';
 import IncidentModal from './IncidentModal';
+import IncidentTrendChart from './IncidentTrendChart';
 import LoginPage from './LoginPage';
 import MachinesPanel from './MachinesPanel';
 import WorkOrderModal from './WorkOrderModal';
-import { clearAuth, closeDowntime, completeWorkOrder, createDowntime, createIncident, createWorkOrder, getDashboardMetrics, getDowntimes, getIncidents, getMachines, getStoredAuth, getWorkOrders, startWorkOrder } from './services/api';
+import { clearAuth, closeDowntime, completeWorkOrder, createDowntime, createIncident, createWorkOrder, getDashboardMetrics, getDowntimes, getIncidents, getIncidentTrend, getMachines, getStoredAuth, getWorkOrders, startWorkOrder } from './services/api';
 import type { AuthResponse, IncidentPriority, WorkOrderPriority } from './types/api';
 
 const priorityMeta: Record<IncidentPriority | WorkOrderPriority, { label: string; className: string }> = {
@@ -26,6 +27,7 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
   const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
   const [showDowntimeModal, setShowDowntimeModal] = useState(false);
   const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: getDashboardMetrics });
+  const trendQuery = useQuery({ queryKey: ['incident-trend'], queryFn: getIncidentTrend });
   const incidentsQuery = useQuery({ queryKey: ['incidents'], queryFn: getIncidents });
   const machinesQuery = useQuery({ queryKey: ['machines'], queryFn: getMachines });
   const workOrdersQuery = useQuery({ queryKey: ['work-orders'], queryFn: getWorkOrders });
@@ -44,6 +46,7 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
       setShowIncidentModal(false);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['incidents'] }),
+        queryClient.invalidateQueries({ queryKey: ['incident-trend'] }),
         queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
       ]);
     },
@@ -86,7 +89,7 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
     { label: 'Disponibilidade', value: dashboard ? `${dashboard.availabilityPercentage.toFixed(1)}%` : '—', icon: Activity },
     { label: 'MTTR · 30 dias', value: dashboard ? `${dashboard.mttrMinutes.toFixed(1)} min` : '—', icon: Timer },
   ];
-  const hasConnectionError = dashboardQuery.isError || incidentsQuery.isError || machinesQuery.isError || workOrdersQuery.isError || downtimesQuery.isError;
+  const hasConnectionError = dashboardQuery.isError || trendQuery.isError || incidentsQuery.isError || machinesQuery.isError || workOrdersQuery.isError || downtimesQuery.isError;
 
   return (
     <main className="app-shell">
@@ -123,6 +126,8 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
             <article className="metric-card" key={label}><div className="metric-icon"><Icon size={18} /></div><span>{label}</span><strong>{value}</strong></article>
           ))}
         </div>
+
+        <IncidentTrendChart data={trendQuery.data ?? []} loading={trendQuery.isLoading} />
 
         <div className="workspace-grid">
           <section className="panel" id="incidents">

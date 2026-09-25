@@ -11,7 +11,11 @@ import com.linepulse.maintenance.WorkOrderRepository;
 import com.linepulse.maintenance.WorkOrderStatus;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +42,29 @@ public class DashboardService {
         double availability = calculateAvailability(totalMachines);
         double mttr = calculateMttr();
         return new DashboardMetrics(totalMachines, activeMachines, openIncidents, activeWorkOrders, availability, mttr);
+    }
+
+    @Transactional(readOnly = true)
+    public List<IncidentTrendPoint> getIncidentTrend() {
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        LocalDate firstDay = today.minusDays(6);
+        Instant rangeStart = firstDay.atStartOfDay().toInstant(ZoneOffset.UTC);
+        Map<LocalDate, Long> counts = new LinkedHashMap<>();
+
+        for (int day = 0; day < 7; day++) {
+            counts.put(firstDay.plusDays(day), 0L);
+        }
+
+        incidentRepository.findByOccurredAtAfterOrderByOccurredAtAsc(rangeStart).forEach(incident -> {
+            LocalDate date = incident.getOccurredAt().atZone(ZoneOffset.UTC).toLocalDate();
+            if (counts.containsKey(date)) {
+                counts.computeIfPresent(date, (key, value) -> value + 1);
+            }
+        });
+
+        return counts.entrySet().stream()
+                .map(entry -> new IncidentTrendPoint(entry.getKey(), entry.getValue()))
+                .toList();
     }
 
     private double calculateAvailability(long machineCount) {

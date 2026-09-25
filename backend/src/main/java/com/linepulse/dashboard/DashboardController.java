@@ -1,5 +1,6 @@
 package com.linepulse.dashboard;
 
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,5 +17,10 @@ public class DashboardController {
     @GetMapping
     DashboardMetrics getMetrics() {
         return dashboardService.getMetrics();
+    }
+
+    @GetMapping("/incident-trend")
+    List<IncidentTrendPoint> getIncidentTrend() {
+        return dashboardService.getIncidentTrend();
     }
 }

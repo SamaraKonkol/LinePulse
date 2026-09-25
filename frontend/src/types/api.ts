@@ -7,6 +7,11 @@ export interface DashboardMetrics {
   mttrMinutes: number;
 }
 
+export interface IncidentTrendPoint {
+  date: string;
+  incidents: number;
+}
+
 export type IncidentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CANCELLED';
 export type UserRole = 'ADMIN' | 'TECHNICIAN' | 'OPERATOR';

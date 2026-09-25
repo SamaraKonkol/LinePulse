@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, Machine, MachineStatus, WorkOrder } from '../types/api';
+import type { AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, IncidentTrendPoint, Machine, MachineStatus, WorkOrder } from '../types/api';
 
 const AUTH_STORAGE_KEY = 'linepulse-auth';
 
@@ -43,6 +43,11 @@ export async function register(name: string, email: string, password: string) {
 
 export async function getDashboardMetrics() {
   const response = await api.get<DashboardMetrics>('/dashboard');
+  return response.data;
+}
+
+export async function getIncidentTrend() {
+  const response = await api.get<IncidentTrendPoint[]>('/dashboard/incident-trend');
   return response.data;
 }
 
