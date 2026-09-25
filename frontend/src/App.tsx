@@ -1,13 +1,38 @@
+import { useQuery } from '@tanstack/react-query';
 import { Activity, AlertTriangle, Factory, Wrench } from 'lucide-react';
+import { getDashboardMetrics, getIncidents } from './services/api';
+import type { IncidentPriority } from './types/api';
 
-const metrics = [
-  { label: 'Máquinas ativas', value: '42', icon: Factory },
-  { label: 'Ocorrências abertas', value: '7', icon: AlertTriangle },
-  { label: 'Ordens em andamento', value: '5', icon: Wrench },
-  { label: 'Disponibilidade', value: '96,8%', icon: Activity },
-];
+const priorityMeta: Record<IncidentPriority, { label: string; className: string }> = {
+  CRITICAL: { label: 'Crítica', className: 'critical' },
+  HIGH: { label: 'Alta', className: 'critical' },
+  MEDIUM: { label: 'Média', className: 'warning' },
+  LOW: { label: 'Baixa', className: 'neutral' },
+};
 
 function App() {
+  const dashboardQuery = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: getDashboardMetrics,
+  });
+  const incidentsQuery = useQuery({
+    queryKey: ['incidents'],
+    queryFn: getIncidents,
+  });
+
+  const dashboard = dashboardQuery.data;
+  const availability = dashboard?.availabilityPercentage ?? 0;
+  const recentIncidents = (incidentsQuery.data ?? [])
+    .filter((incident) => incident.status === 'OPEN' || incident.status === 'IN_PROGRESS')
+    .slice(0, 4);
+  const metrics = [
+    { label: 'Máquinas ativas', value: dashboard?.activeMachines ?? '—', icon: Factory },
+    { label: 'Ocorrências abertas', value: dashboard?.openIncidents ?? '—', icon: AlertTriangle },
+    { label: 'Ordens em andamento', value: dashboard?.activeWorkOrders ?? '—', icon: Wrench },
+    { label: 'Disponibilidade', value: dashboard ? `${dashboard.availabilityPercentage.toFixed(1)}%` : '—', icon: Activity },
+  ];
+  const hasConnectionError = dashboardQuery.isError || incidentsQuery.isError;
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
@@ -30,6 +55,12 @@ function App() {
           <button className="primary-button">Nova ocorrência</button>
         </header>
 
+        {hasConnectionError && (
+          <div className="connection-banner">
+            Não foi possível carregar os dados da API. Verifique se o backend está disponível.
+          </div>
+        )}
+
         <div className="metrics-grid">
           {metrics.map(({ label, value, icon: Icon }) => (
             <article className="metric-card" key={label}>
@@ -49,24 +80,34 @@ function App() {
               </div>
               <button className="text-button">Ver todas</button>
             </div>
-            <div className="incident-row">
-              <span className="status-dot critical" />
-              <div><strong>Prensa PR-04</strong><small>Temperatura acima do limite</small></div>
-              <span className="badge">Crítica</span>
-            </div>
-            <div className="incident-row">
-              <span className="status-dot warning" />
-              <div><strong>Esteira ES-12</strong><small>Ruído irregular no acionamento</small></div>
-              <span className="badge neutral">Média</span>
-            </div>
+
+            {incidentsQuery.isLoading && <div className="empty-state">Carregando ocorrências...</div>}
+            {!incidentsQuery.isLoading && recentIncidents.length === 0 && (
+              <div className="empty-state">Nenhuma ocorrência aberta no momento.</div>
+            )}
+            {recentIncidents.map((incident) => {
+              const priority = priorityMeta[incident.priority];
+              return (
+                <div className="incident-row" key={incident.id}>
+                  <span className={`status-dot ${priority.className}`} />
+                  <div>
+                    <strong>{incident.assetCode} · {incident.machineName}</strong>
+                    <small>{incident.title}</small>
+                  </div>
+                  <span className={`badge ${priority.className}`}>{priority.label}</span>
+                </div>
+              );
+            })}
           </section>
 
           <aside className="panel availability-panel">
             <span className="eyebrow">Disponibilidade</span>
-            <h2>96,8%</h2>
+            <h2>{dashboard ? `${availability.toFixed(1)}%` : '—'}</h2>
             <p>Últimas 24 horas</p>
-            <div className="availability-bar"><span /></div>
-            <small>Meta operacional: 95%</small>
+            <div className="availability-bar">
+              <span style={{ width: `${Math.max(0, Math.min(100, availability))}%` }} />
+            </div>
+            <small>{dashboard ? `${dashboard.totalMachines} máquinas consideradas no cálculo` : 'Calculando disponibilidade...'}</small>
           </aside>
         </div>
       </section>

@@ -25,6 +25,7 @@ a { color: inherit; text-decoration: none; }
 .eyebrow { color: #166534; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em; }
 .primary-button { border: 0; border-radius: 8px; padding: 11px 16px; background: #166534; color: #fff; cursor: pointer; }
 .primary-button:hover { background: #14532d; }
+.connection-banner { margin-bottom: 16px; padding: 12px 14px; border: 1px solid #f2c9c9; border-radius: 9px; background: #fff5f5; color: #8a2525; font-size: 14px; }
 
 .metrics-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .metric-card, .panel { background: #fff; border: 1px solid #dce5df; border-radius: 12px; }
@@ -44,11 +45,15 @@ a { color: inherit; text-decoration: none; }
 .status-dot { width: 8px; height: 8px; border-radius: 999px; }
 .status-dot.critical { background: #dc2626; }
 .status-dot.warning { background: #d97706; }
-.badge { border-radius: 999px; padding: 5px 9px; background: #fee2e2; color: #991b1b; font-size: 12px; font-weight: 700; }
+.status-dot.neutral { background: #94a3b8; }
+.badge { border-radius: 999px; padding: 5px 9px; font-size: 12px; font-weight: 700; }
+.badge.critical { background: #fee2e2; color: #991b1b; }
+.badge.warning { background: #fff7ed; color: #9a3412; }
 .badge.neutral { background: #f3f4f6; color: #4b5563; }
+.empty-state { border-top: 1px solid #edf1ee; padding: 20px 0 4px; color: #758079; font-size: 14px; }
 .availability-panel h2 { font-size: 42px; margin: 18px 0 2px; }
 .availability-bar { height: 8px; background: #e8efe9; border-radius: 999px; overflow: hidden; margin: 24px 0 10px; }
-.availability-bar span { display: block; width: 96.8%; height: 100%; background: #22c55e; }
+.availability-bar span { display: block; height: 100%; background: #22c55e; transition: width .3s ease; }
 
 @media (max-width: 980px) {
   .app-shell { grid-template-columns: 1fr; }
