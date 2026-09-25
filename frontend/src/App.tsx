@@ -3,6 +3,7 @@ import { Activity, AlertTriangle, Factory, LogOut, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import IncidentModal from './IncidentModal';
 import LoginPage from './LoginPage';
+import MachinesPanel from './MachinesPanel';
 import WorkOrderModal from './WorkOrderModal';
 import { clearAuth, createIncident, createWorkOrder, getDashboardMetrics, getIncidents, getMachines, getStoredAuth, getWorkOrders } from './services/api';
 import type { AuthResponse, IncidentPriority, WorkOrderPriority } from './types/api';
@@ -154,6 +155,8 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
             <small>{dashboard ? `${dashboard.totalMachines} máquinas consideradas no cálculo` : 'Calculando disponibilidade...'}</small>
           </aside>
         </div>
+
+        <MachinesPanel machines={machinesQuery.data ?? []} canManage={canManageMaintenance} />
 
         <section className="panel maintenance-panel" id="maintenance">
           <div className="panel-heading">
