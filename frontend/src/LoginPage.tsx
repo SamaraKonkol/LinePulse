@@ -7,6 +7,12 @@ type Props = {
   onAuthenticated: (auth: AuthResponse) => void;
 };
 
+const demoAccounts = [
+  { label: 'Administrador', email: 'admin@linepulse.local' },
+  { label: 'Técnico', email: 'technician@linepulse.local' },
+  { label: 'Operador', email: 'operator@linepulse.local' },
+];
+
 function LoginPage({ onAuthenticated }: Props) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
@@ -53,6 +59,19 @@ function LoginPage({ onAuthenticated }: Props) {
           <span className="eyebrow">Acesso ao sistema</span>
           <h2>{mode === 'login' ? 'Entrar no LinePulse' : 'Criar acesso'}</h2>
           <p>{mode === 'login' ? 'Use suas credenciais para acessar a operação.' : 'Novos usuários entram inicialmente como operadores.'}</p>
+
+          {mode === 'login' && (
+            <div className="demo-access">
+              <span>Perfis demo</span>
+              <div className="demo-access-actions">
+                {demoAccounts.map((account) => (
+                  <button type="button" key={account.email} onClick={() => setEmail(account.email)}>
+                    {account.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             {mode === 'register' && (
