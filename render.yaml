@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: linepulse-api
+    runtime: docker
+    plan: free
+    region: ohio
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_HOST
+        fromDatabase:
+          name: linepulse-db
+          property: host
+      - key: DATABASE_PORT
+        fromDatabase:
+          name: linepulse-db
+          property: port
+      - key: DATABASE_NAME
+        fromDatabase:
+          name: linepulse-db
+          property: database
+      - key: DATABASE_USER
+        fromDatabase:
+          name: linepulse-db
+          property: user
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: linepulse-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION_MINUTES
+        value: "480"
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://samarakonkol.github.io
+      - key: DEMO_USERS_ENABLED
+        value: "true"
+      - key: DEMO_USERS_PASSWORD
+        sync: false
+
+
+databases:
+  - name: linepulse-db
+    plan: free
+    region: ohio
+    postgresMajorVersion: "16"
+    databaseName: linepulse
+    user: linepulse

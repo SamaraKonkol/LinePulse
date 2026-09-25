@@ -1,10 +1,17 @@
 import { FormEvent, useState } from 'react';
+import BrandLogo from './brand/BrandLogo';
 import { login, register, storeAuth } from './services/api';
 import type { AuthResponse } from './types/api';
 
 type Props = {
   onAuthenticated: (auth: AuthResponse) => void;
 };
+
+const demoAccounts = [
+  { label: 'Administrador', email: 'admin@linepulse.local' },
+  { label: 'Técnico', email: 'technician@linepulse.local' },
+  { label: 'Operador', email: 'operator@linepulse.local' },
+];
 
 function LoginPage({ onAuthenticated }: Props) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -37,8 +44,8 @@ function LoginPage({ onAuthenticated }: Props) {
   return (
     <main className="auth-shell">
       <section className="auth-intro">
-        <div className="brand-mark auth-brand">LP</div>
-        <span className="eyebrow">LinePulse</span>
+        <BrandLogo variant="horizontal" className="auth-brand-lockup" />
+        <span className="eyebrow">Operação conectada</span>
         <h1>Operações industriais com contexto, prioridade e histórico.</h1>
         <p>Centralize ocorrências, ordens de manutenção e disponibilidade da planta em uma única visão.</p>
         <div className="auth-note">
@@ -52,6 +59,19 @@ function LoginPage({ onAuthenticated }: Props) {
           <span className="eyebrow">Acesso ao sistema</span>
           <h2>{mode === 'login' ? 'Entrar no LinePulse' : 'Criar acesso'}</h2>
           <p>{mode === 'login' ? 'Use suas credenciais para acessar a operação.' : 'Novos usuários entram inicialmente como operadores.'}</p>
+
+          {mode === 'login' && (
+            <div className="demo-access">
+              <span>Perfis demo</span>
+              <div className="demo-access-actions">
+                {demoAccounts.map((account) => (
+                  <button type="button" key={account.email} onClick={() => setEmail(account.email)}>
+                    {account.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             {mode === 'register' && (
