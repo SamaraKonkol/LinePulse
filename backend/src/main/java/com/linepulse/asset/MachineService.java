@@ -1,5 +1,7 @@
 package com.linepulse.asset;
 
+import com.linepulse.common.ConflictException;
+import com.linepulse.common.NotFoundException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -24,11 +26,11 @@ public class MachineService {
     @Transactional
     public MachineResponse create(CreateMachineRequest request) {
         if (machineRepository.existsByAssetCodeIgnoreCase(request.assetCode())) {
-            throw new IllegalArgumentException("Asset code already exists");
+            throw new ConflictException("Asset code already exists");
         }
 
         ProductionLine line = productionLineRepository.findById(request.productionLineId())
-                .orElseThrow(() -> new IllegalArgumentException("Production line not found"));
+                .orElseThrow(() -> new NotFoundException("Production line not found"));
         Instant now = Instant.now();
         Machine machine = new Machine(
                 UUID.randomUUID(),
