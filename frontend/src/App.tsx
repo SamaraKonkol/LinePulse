@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Activity, AlertTriangle, Factory, LogOut, Wrench } from 'lucide-react';
 import { useState } from 'react';
+import IncidentModal from './IncidentModal';
 import LoginPage from './LoginPage';
-import { clearAuth, getDashboardMetrics, getIncidents, getStoredAuth } from './services/api';
+import { clearAuth, createIncident, getDashboardMetrics, getIncidents, getMachines, getStoredAuth } from './services/api';
 import type { AuthResponse, IncidentPriority } from './types/api';
 
 const priorityMeta: Record<IncidentPriority, { label: string; className: string }> = {
@@ -19,8 +20,22 @@ const roleLabel = {
 };
 
 function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => void }) {
+  const queryClient = useQueryClient();
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
   const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: getDashboardMetrics });
   const incidentsQuery = useQuery({ queryKey: ['incidents'], queryFn: getIncidents });
+  const machinesQuery = useQuery({ queryKey: ['machines'], queryFn: getMachines });
+  const createIncidentMutation = useMutation({
+    mutationFn: createIncident,
+    onSuccess: async () => {
+      setShowIncidentModal(false);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['incidents'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+      ]);
+    },
+  });
+
   const dashboard = dashboardQuery.data;
   const availability = dashboard?.availabilityPercentage ?? 0;
   const recentIncidents = (incidentsQuery.data ?? [])
@@ -32,7 +47,7 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
     { label: 'Ordens em andamento', value: dashboard?.activeWorkOrders ?? '—', icon: Wrench },
     { label: 'Disponibilidade', value: dashboard ? `${dashboard.availabilityPercentage.toFixed(1)}%` : '—', icon: Activity },
   ];
-  const hasConnectionError = dashboardQuery.isError || incidentsQuery.isError;
+  const hasConnectionError = dashboardQuery.isError || incidentsQuery.isError || machinesQuery.isError;
 
   return (
     <main className="app-shell">
@@ -58,11 +73,16 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
             <h1>Visão geral</h1>
             <p>Acompanhe disponibilidade, ocorrências e manutenção da planta.</p>
           </div>
-          <button className="primary-button">Nova ocorrência</button>
+          <button className="primary-button" onClick={() => setShowIncidentModal(true)} disabled={machinesQuery.isLoading || (machinesQuery.data?.length ?? 0) === 0}>
+            Nova ocorrência
+          </button>
         </header>
 
         {hasConnectionError && (
-          <div className="connection-banner">Não foi possível carregar os dados da API.</div>
+          <div className="connection-banner">Não foi possível carregar todos os dados da API.</div>
+        )}
+        {createIncidentMutation.isError && (
+          <div className="connection-banner">Não foi possível registrar a ocorrência. Revise os dados e tente novamente.</div>
         )}
 
         <div className="metrics-grid">
@@ -115,6 +135,15 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
           </aside>
         </div>
       </section>
+
+      {showIncidentModal && (
+        <IncidentModal
+          machines={machinesQuery.data ?? []}
+          loading={createIncidentMutation.isPending}
+          onClose={() => setShowIncidentModal(false)}
+          onSubmit={(draft) => createIncidentMutation.mutate(draft)}
+        />
+      )}
     </main>
   );
 }
