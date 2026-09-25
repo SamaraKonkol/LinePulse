@@ -9,6 +9,7 @@ import IncidentModal from './IncidentModal';
 import IncidentTrendChart from './IncidentTrendChart';
 import LoginPage from './LoginPage';
 import MachinesPanel from './MachinesPanel';
+import MaintenanceHistoryPanel from './MaintenanceHistoryPanel';
 import WorkOrderModal from './WorkOrderModal';
 import { cancelIncident, clearAuth, closeDowntime, completeWorkOrder, createDowntime, createIncident, createWorkOrder, getAuditEvents, getDashboardMetrics, getDowntimes, getIncidents, getIncidentTrend, getMachines, getStoredAuth, getWorkOrders, resolveIncident, startIncident, startWorkOrder } from './services/api';
 import type { AuthResponse, IncidentPriority, WorkOrderPriority } from './types/api';
@@ -28,6 +29,7 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
   const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [showIncidentHistory, setShowIncidentHistory] = useState(false);
   const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
+  const [showMaintenanceHistory, setShowMaintenanceHistory] = useState(false);
   const [showDowntimeModal, setShowDowntimeModal] = useState(false);
   const canManageOperations = auth.user.role === 'ADMIN' || auth.user.role === 'TECHNICIAN';
   const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: getDashboardMetrics });
@@ -188,7 +190,13 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
         <MachinesPanel machines={machinesQuery.data ?? []} canManage={canManageOperations} />
 
         <section className="panel maintenance-panel" id="maintenance">
-          <div className="panel-heading"><div><span className="eyebrow">Execução</span><h2>Ordens de manutenção</h2></div>{canManageOperations && <button className="secondary-button" onClick={() => setShowWorkOrderModal(true)} disabled={(machinesQuery.data?.length ?? 0) === 0}>Nova ordem</button>}</div>
+          <div className="panel-heading">
+            <div><span className="eyebrow">Execução</span><h2>Ordens de manutenção</h2></div>
+            <div className="maintenance-heading-actions">
+              <button className="text-button" type="button" onClick={() => setShowMaintenanceHistory(true)}>Ver histórico</button>
+              {canManageOperations && <button className="secondary-button" onClick={() => setShowWorkOrderModal(true)} disabled={(machinesQuery.data?.length ?? 0) === 0}>Nova ordem</button>}
+            </div>
+          </div>
           {workOrdersQuery.isLoading && <div className="empty-state">Carregando ordens...</div>}
           {!workOrdersQuery.isLoading && recentWorkOrders.length === 0 && <div className="empty-state">Nenhuma ordem em andamento.</div>}
           <div className="work-order-list">
@@ -208,6 +216,7 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
           </div>
         </section>
 
+        {showMaintenanceHistory && <MaintenanceHistoryPanel orders={workOrdersQuery.data ?? []} onClose={() => setShowMaintenanceHistory(false)} />}
         {canManageOperations && <AuditPanel events={auditQuery.data ?? []} loading={auditQuery.isLoading} />}
       </section>
 

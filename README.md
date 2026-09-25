@@ -69,6 +69,7 @@ Controller -> Service -> Repository -> PostgreSQL
 - Incident creation and lifecycle: open, in progress, resolved and cancelled
 - Searchable incident history with status and priority filters
 - Maintenance work order creation, start and completion lifecycle
+- Searchable maintenance history with status, type and priority filters
 - Downtime registration and closing
 - Availability calculation using real downtime intervals
 - MTTR calculation using completed maintenance orders from the last 30 days
@@ -223,7 +224,6 @@ The Docker Compose configuration uses local development defaults and supports ov
 
 ## Roadmap
 
-- Maintenance history with advanced filters
 - Additional service and integration tests
 - Operational alerts and notification rules
 - AI-assisted incident classification
