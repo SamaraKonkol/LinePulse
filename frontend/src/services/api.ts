@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, DashboardMetrics, Incident } from '../types/api';
+import type { AuthResponse, CreateIncidentInput, DashboardMetrics, Incident, Machine } from '../types/api';
 
 const AUTH_STORAGE_KEY = 'linepulse-auth';
 
@@ -53,6 +53,16 @@ export async function getDashboardMetrics() {
 
 export async function getIncidents() {
   const response = await api.get<Incident[]>('/incidents');
+  return response.data;
+}
+
+export async function getMachines() {
+  const response = await api.get<Machine[]>('/machines');
+  return response.data;
+}
+
+export async function createIncident(input: CreateIncidentInput) {
+  const response = await api.post<Incident>('/incidents', input);
   return response.data;
 }
 
