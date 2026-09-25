@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, CreateIncidentInput, CreateWorkOrderInput, DashboardMetrics, Incident, Machine, MachineStatus, WorkOrder } from '../types/api';
+import type { AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, Machine, MachineStatus, WorkOrder } from '../types/api';
 
 const AUTH_STORAGE_KEY = 'linepulse-auth';
 
@@ -28,13 +28,8 @@ export function getStoredAuth(): AuthResponse | null {
   }
 }
 
-export function storeAuth(auth: AuthResponse) {
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
-}
-
-export function clearAuth() {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
-}
+export function storeAuth(auth: AuthResponse) { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth)); }
+export function clearAuth() { localStorage.removeItem(AUTH_STORAGE_KEY); }
 
 export async function login(email: string, password: string) {
   const response = await api.post<AuthResponse>('/auth/login', { email, password });
@@ -88,6 +83,21 @@ export async function startWorkOrder(id: string) {
 
 export async function completeWorkOrder(id: string) {
   const response = await api.patch<WorkOrder>(`/work-orders/${id}/complete`);
+  return response.data;
+}
+
+export async function getDowntimes() {
+  const response = await api.get<Downtime[]>('/downtimes');
+  return response.data;
+}
+
+export async function createDowntime(input: CreateDowntimeInput) {
+  const response = await api.post<Downtime>('/downtimes', input);
+  return response.data;
+}
+
+export async function closeDowntime(id: string) {
+  const response = await api.patch<Downtime>(`/downtimes/${id}/close`, {});
   return response.data;
 }
 

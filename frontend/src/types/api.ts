@@ -58,6 +58,18 @@ export interface WorkOrder {
   createdAt: string;
 }
 
+export interface Downtime {
+  id: string;
+  machineId: string;
+  assetCode: string;
+  machineName: string;
+  incidentId: string | null;
+  reason: string;
+  startedAt: string;
+  endedAt: string | null;
+  createdAt: string;
+}
+
 export interface CreateIncidentInput {
   machineId: string;
   title: string;
@@ -74,6 +86,13 @@ export interface CreateWorkOrderInput {
   type: MaintenanceType;
   priority: WorkOrderPriority;
   scheduledFor?: string;
+}
+
+export interface CreateDowntimeInput {
+  machineId: string;
+  incidentId?: string;
+  reason: string;
+  startedAt?: string;
 }
 
 export interface AuthUser {

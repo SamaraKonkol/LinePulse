@@ -1,0 +1,48 @@
+.downtime-panel {
+  margin-top: 16px;
+}
+
+.downtime-list {
+  display: grid;
+}
+
+.downtime-row {
+  display: grid;
+  grid-template-columns: 5px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-top: 1px solid #edf1ee;
+}
+
+.downtime-indicator {
+  width: 5px;
+  height: 42px;
+  border-radius: 999px;
+  background: #dc2626;
+}
+
+.downtime-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.downtime-copy span {
+  color: #4e5d54;
+  font-size: 13px;
+}
+
+.downtime-copy small {
+  color: #758079;
+}
+
+@media (max-width: 640px) {
+  .downtime-row {
+    grid-template-columns: 5px 1fr;
+  }
+
+  .downtime-row .order-action {
+    grid-column: 2;
+    width: max-content;
+  }
+}
