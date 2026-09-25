@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: linepulse-postgres
+    environment:
+      POSTGRES_DB: linepulse
+      POSTGRES_USER: linepulse
+      POSTGRES_PASSWORD: linepulse
+    ports:
+      - "5432:5432"
+    volumes:
+      - linepulse_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linepulse -d linepulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  linepulse_postgres_data:
