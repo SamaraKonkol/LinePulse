@@ -2,6 +2,7 @@ package com.linepulse.incident;
 
 import com.linepulse.asset.Machine;
 import com.linepulse.asset.MachineRepository;
+import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
 import java.time.Instant;
@@ -14,10 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class IncidentService {
     private final IncidentRepository incidentRepository;
     private final MachineRepository machineRepository;
+    private final AuditService auditService;
 
-    public IncidentService(IncidentRepository incidentRepository, MachineRepository machineRepository) {
+    public IncidentService(IncidentRepository incidentRepository, MachineRepository machineRepository, AuditService auditService) {
         this.incidentRepository = incidentRepository;
         this.machineRepository = machineRepository;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -43,7 +46,9 @@ public class IncidentService {
                 now,
                 now
         );
-        return IncidentResponse.from(incidentRepository.save(incident));
+        Incident saved = incidentRepository.save(incident);
+        auditService.record("INCIDENT_CREATED", "INCIDENT", saved.getId(), "Ocorrência aberta em " + machine.getAssetCode() + ": " + saved.getTitle());
+        return IncidentResponse.from(saved);
     }
 
     @Transactional
@@ -53,7 +58,9 @@ public class IncidentService {
             throw new ConflictException("Only open incidents can be started");
         }
         incident.start(Instant.now());
-        return IncidentResponse.from(incidentRepository.save(incident));
+        Incident saved = incidentRepository.save(incident);
+        auditService.record("INCIDENT_STARTED", "INCIDENT", saved.getId(), "Ocorrência iniciada em " + saved.getMachine().getAssetCode());
+        return IncidentResponse.from(saved);
     }
 
     @Transactional
@@ -63,7 +70,9 @@ public class IncidentService {
             throw new ConflictException("Only incidents in progress can be resolved");
         }
         incident.resolve(Instant.now());
-        return IncidentResponse.from(incidentRepository.save(incident));
+        Incident saved = incidentRepository.save(incident);
+        auditService.record("INCIDENT_RESOLVED", "INCIDENT", saved.getId(), "Ocorrência resolvida em " + saved.getMachine().getAssetCode());
+        return IncidentResponse.from(saved);
     }
 
     @Transactional
@@ -73,7 +82,9 @@ public class IncidentService {
             throw new ConflictException("Only active incidents can be cancelled");
         }
         incident.cancel(Instant.now());
-        return IncidentResponse.from(incidentRepository.save(incident));
+        Incident saved = incidentRepository.save(incident);
+        auditService.record("INCIDENT_CANCELLED", "INCIDENT", saved.getId(), "Ocorrência cancelada em " + saved.getMachine().getAssetCode());
+        return IncidentResponse.from(saved);
     }
 
     private Incident findIncident(UUID id) {

@@ -1,0 +1,43 @@
+.audit-panel {
+  margin-top: 16px;
+}
+
+.audit-panel .panel-heading > svg {
+  color: #166534;
+}
+
+.audit-list {
+  display: grid;
+}
+
+.audit-row {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 13px 0;
+  border-top: 1px solid #edf1ee;
+}
+
+.audit-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 4px #f0fdf4;
+}
+
+.audit-row div {
+  display: grid;
+  gap: 4px;
+}
+
+.audit-row strong {
+  color: #253129;
+  font-size: 0.9rem;
+}
+
+.audit-row small {
+  color: #758079;
+}

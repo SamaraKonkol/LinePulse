@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Activity, AlertTriangle, Factory, LogOut, Timer, Wrench } from 'lucide-react';
 import { useState } from 'react';
+import AuditPanel from './AuditPanel';
 import DowntimeModal from './DowntimeModal';
 import DowntimePanel from './DowntimePanel';
 import IncidentHistoryPanel from './IncidentHistoryPanel';
@@ -9,7 +10,7 @@ import IncidentTrendChart from './IncidentTrendChart';
 import LoginPage from './LoginPage';
 import MachinesPanel from './MachinesPanel';
 import WorkOrderModal from './WorkOrderModal';
-import { cancelIncident, clearAuth, closeDowntime, completeWorkOrder, createDowntime, createIncident, createWorkOrder, getDashboardMetrics, getDowntimes, getIncidents, getIncidentTrend, getMachines, getStoredAuth, getWorkOrders, resolveIncident, startIncident, startWorkOrder } from './services/api';
+import { cancelIncident, clearAuth, closeDowntime, completeWorkOrder, createDowntime, createIncident, createWorkOrder, getAuditEvents, getDashboardMetrics, getDowntimes, getIncidents, getIncidentTrend, getMachines, getStoredAuth, getWorkOrders, resolveIncident, startIncident, startWorkOrder } from './services/api';
 import type { AuthResponse, IncidentPriority, WorkOrderPriority } from './types/api';
 
 const priorityMeta: Record<IncidentPriority | WorkOrderPriority, { label: string; className: string }> = {
@@ -28,23 +29,28 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
   const [showIncidentHistory, setShowIncidentHistory] = useState(false);
   const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
   const [showDowntimeModal, setShowDowntimeModal] = useState(false);
+  const canManageOperations = auth.user.role === 'ADMIN' || auth.user.role === 'TECHNICIAN';
   const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: getDashboardMetrics });
   const trendQuery = useQuery({ queryKey: ['incident-trend'], queryFn: getIncidentTrend });
   const incidentsQuery = useQuery({ queryKey: ['incidents'], queryFn: getIncidents });
   const machinesQuery = useQuery({ queryKey: ['machines'], queryFn: getMachines });
   const workOrdersQuery = useQuery({ queryKey: ['work-orders'], queryFn: getWorkOrders });
   const downtimesQuery = useQuery({ queryKey: ['downtimes'], queryFn: getDowntimes });
-  const canManageOperations = auth.user.role === 'ADMIN' || auth.user.role === 'TECHNICIAN';
+  const auditQuery = useQuery({ queryKey: ['audit-events'], queryFn: getAuditEvents, enabled: canManageOperations, refetchInterval: 15_000 });
+
+  const refreshAudit = () => queryClient.invalidateQueries({ queryKey: ['audit-events'] });
 
   const refreshDashboard = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
     queryClient.invalidateQueries({ queryKey: ['work-orders'] }),
     queryClient.invalidateQueries({ queryKey: ['downtimes'] }),
+    refreshAudit(),
   ]);
 
   const refreshIncidents = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ['incidents'] }),
     queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+    refreshAudit(),
   ]);
 
   const createIncidentMutation = useMutation({
@@ -55,6 +61,7 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
         queryClient.invalidateQueries({ queryKey: ['incidents'] }),
         queryClient.invalidateQueries({ queryKey: ['incident-trend'] }),
         queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+        refreshAudit(),
       ]);
     },
   });
@@ -105,7 +112,7 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
     { label: 'Disponibilidade', value: dashboard ? `${dashboard.availabilityPercentage.toFixed(1)}%` : '—', icon: Activity },
     { label: 'MTTR · 30 dias', value: dashboard ? `${dashboard.mttrMinutes.toFixed(1)} min` : '—', icon: Timer },
   ];
-  const hasConnectionError = dashboardQuery.isError || trendQuery.isError || incidentsQuery.isError || machinesQuery.isError || workOrdersQuery.isError || downtimesQuery.isError;
+  const hasConnectionError = dashboardQuery.isError || trendQuery.isError || incidentsQuery.isError || machinesQuery.isError || workOrdersQuery.isError || downtimesQuery.isError || (canManageOperations && auditQuery.isError);
   const hasMutationError = createIncidentMutation.isError || incidentTransitionMutation.isError || createWorkOrderMutation.isError || workOrderTransitionMutation.isError || createDowntimeMutation.isError || closeDowntimeMutation.isError;
 
   return (
@@ -200,6 +207,8 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
             })}
           </div>
         </section>
+
+        {canManageOperations && <AuditPanel events={auditQuery.data ?? []} loading={auditQuery.isLoading} />}
       </section>
 
       {showIncidentModal && <IncidentModal machines={machinesQuery.data ?? []} loading={createIncidentMutation.isPending} onClose={() => setShowIncidentModal(false)} onSubmit={(draft) => createIncidentMutation.mutate(draft)} />}

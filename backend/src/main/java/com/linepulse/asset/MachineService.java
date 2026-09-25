@@ -1,5 +1,6 @@
 package com.linepulse.asset;
 
+import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
 import java.time.Instant;
@@ -12,10 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class MachineService {
     private final MachineRepository machineRepository;
     private final ProductionLineRepository productionLineRepository;
+    private final AuditService auditService;
 
-    public MachineService(MachineRepository machineRepository, ProductionLineRepository productionLineRepository) {
+    public MachineService(MachineRepository machineRepository, ProductionLineRepository productionLineRepository, AuditService auditService) {
         this.machineRepository = machineRepository;
         this.productionLineRepository = productionLineRepository;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -45,7 +48,9 @@ public class MachineService {
                 now,
                 now
         );
-        return MachineResponse.from(machineRepository.save(machine));
+        Machine saved = machineRepository.save(machine);
+        auditService.record("MACHINE_CREATED", "MACHINE", saved.getId(), "Máquina " + saved.getAssetCode() + " cadastrada");
+        return MachineResponse.from(saved);
     }
 
     @Transactional
@@ -53,6 +58,7 @@ public class MachineService {
         Machine machine = machineRepository.findById(machineId)
                 .orElseThrow(() -> new NotFoundException("Machine not found"));
         machine.changeStatus(request.status());
+        auditService.record("MACHINE_STATUS_CHANGED", "MACHINE", machine.getId(), "Status de " + machine.getAssetCode() + " alterado para " + request.status());
         return MachineResponse.from(machine);
     }
 }

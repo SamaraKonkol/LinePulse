@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.linepulse.asset.Machine;
 import com.linepulse.asset.MachineRepository;
+import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.incident.IncidentRepository;
 import java.time.Instant;
@@ -23,7 +24,7 @@ class WorkOrderServiceTest {
     @BeforeEach
     void setUp() {
         workOrderRepository = mock(WorkOrderRepository.class);
-        service = new WorkOrderService(workOrderRepository, mock(MachineRepository.class), mock(IncidentRepository.class));
+        service = new WorkOrderService(workOrderRepository, mock(MachineRepository.class), mock(IncidentRepository.class), mock(AuditService.class));
         machine = mock(Machine.class);
         when(machine.getId()).thenReturn(UUID.randomUUID());
         when(machine.getAssetCode()).thenReturn("PR-04");
