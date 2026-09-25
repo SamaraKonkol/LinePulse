@@ -24,6 +24,7 @@ Industrial maintenance and operations platform for managing production assets, i
 - TanStack Query
 - Axios
 - Lucide React
+- Nginx
 
 ### Infrastructure
 - Docker
@@ -63,6 +64,7 @@ Industrial maintenance and operations platform for managing production assets, i
 - Unit tests for maintenance lifecycle and dashboard indicators
 - Responsive React interface
 - CI pipeline validating backend tests and frontend builds
+- Full local stack with Docker Compose
 
 ## Project structure
 
@@ -78,20 +80,50 @@ LinePulse/
 │   │   ├── downtime/
 │   │   ├── incident/
 │   │   └── maintenance/
-│   └── src/test/java/com/linepulse/
+│   ├── src/test/java/com/linepulse/
+│   └── Dockerfile
 ├── frontend/
-│   └── src/
+│   ├── src/
+│   ├── Dockerfile
+│   └── nginx.conf
 ├── docs/
 ├── .github/workflows/
 └── docker-compose.yml
 ```
 
-## Local development
-
-Start PostgreSQL:
+## Run the complete stack with Docker
 
 ```bash
-docker compose up -d
+docker compose up --build
+```
+
+After the containers start:
+
+```text
+Frontend: http://localhost:5173
+API: http://localhost:8080/api
+Swagger: http://localhost:8080/swagger-ui/index.html
+PostgreSQL: localhost:5432
+```
+
+Stop the stack with:
+
+```bash
+docker compose down
+```
+
+To also remove the local PostgreSQL volume:
+
+```bash
+docker compose down -v
+```
+
+## Run services manually
+
+Start only PostgreSQL:
+
+```bash
+docker compose up -d postgres
 ```
 
 Run the backend:
@@ -108,8 +140,6 @@ cd frontend
 npm install
 npm run dev
 ```
-
-The default local API URL is `http://localhost:8080/api` and the frontend runs on `http://localhost:5173`.
 
 ## API documentation
 
@@ -144,6 +174,8 @@ Frontend:
 ```text
 VITE_API_URL
 ```
+
+The Docker Compose configuration uses local development defaults and supports overriding `JWT_SECRET` and `VITE_API_URL` through environment variables.
 
 ## Roadmap
 
