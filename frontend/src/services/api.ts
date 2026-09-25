@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuditEvent, AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, IncidentTrendPoint, Machine, MachineStatus, WorkOrder } from '../types/api';
+import type { AuditEvent, AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, IncidentTrendPoint, Machine, MachineStatus, OperationalAlert, WorkOrder } from '../types/api';
 
 const AUTH_STORAGE_KEY = 'linepulse-auth';
 
@@ -48,6 +48,11 @@ export async function getDashboardMetrics() {
 
 export async function getIncidentTrend() {
   const response = await api.get<IncidentTrendPoint[]>('/dashboard/incident-trend');
+  return response.data;
+}
+
+export async function getAlerts() {
+  const response = await api.get<OperationalAlert[]>('/alerts');
   return response.data;
 }
 

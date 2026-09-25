@@ -17,6 +17,12 @@ Industrial maintenance and operations platform for managing production assets, i
 - Flyway
 - Maven
 
+### Testing
+- JUnit 5
+- Mockito
+- Spring Boot Test
+- Testcontainers with PostgreSQL
+
 ### Frontend
 - React
 - TypeScript
@@ -74,11 +80,13 @@ Controller -> Service -> Repository -> PostgreSQL
 - Availability calculation using real downtime intervals
 - MTTR calculation using completed maintenance orders from the last 30 days
 - Seven-day incident trend chart backed by API data
+- Operational alerts for critical incidents, prolonged downtime and critical work orders
 - Persistent audit trail with authenticated actor and timestamp
 - Recent operational activity feed for technician and admin roles
 - PostgreSQL schema managed with Flyway migrations
 - OpenAPI documentation with Bearer JWT authentication
-- Unit tests for maintenance and incident lifecycle rules and dashboard indicators
+- Unit tests for maintenance, incident lifecycle, alerts and dashboard indicators
+- PostgreSQL integration tests covering registration, real JWT authorization and user-backed token validation
 - Responsive React interface
 - CI pipeline validating backend tests, frontend build and Docker Compose build
 - Full local stack with Docker Compose
@@ -89,6 +97,7 @@ Controller -> Service -> Repository -> PostgreSQL
 LinePulse/
 ├── backend/
 │   ├── src/main/java/com/linepulse/
+│   │   ├── alert/
 │   │   ├── asset/
 │   │   ├── audit/
 │   │   ├── auth/
@@ -224,8 +233,8 @@ The Docker Compose configuration uses local development defaults and supports ov
 
 ## Roadmap
 
-- Additional service and integration tests
-- Operational alerts and notification rules
+- Additional domain integration tests
+- External notification delivery rules (email/webhook)
 - AI-assisted incident classification
 - Production deployment
 

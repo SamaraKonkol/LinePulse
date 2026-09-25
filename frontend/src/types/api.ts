@@ -19,6 +19,7 @@ export type MachineStatus = 'RUNNING' | 'STOPPED' | 'MAINTENANCE' | 'INACTIVE';
 export type MaintenanceType = 'CORRECTIVE' | 'PREVENTIVE' | 'INSPECTION';
 export type WorkOrderPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type WorkOrderStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type AlertSeverity = 'CRITICAL' | 'WARNING';
 
 export interface Incident {
   id: string;
@@ -83,6 +84,16 @@ export interface AuditEvent {
   description: string;
   actorEmail: string;
   createdAt: string;
+}
+
+export interface OperationalAlert {
+  key: string;
+  severity: AlertSeverity;
+  title: string;
+  message: string;
+  sourceType: string;
+  sourceId: string;
+  detectedAt: string;
 }
 
 export interface CreateIncidentInput {
