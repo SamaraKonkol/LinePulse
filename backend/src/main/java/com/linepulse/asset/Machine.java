@@ -52,6 +52,11 @@ public class Machine {
         this.updatedAt = updatedAt;
     }
 
+    public void changeStatus(MachineStatus status) {
+        this.status = status;
+        this.updatedAt = Instant.now();
+    }
+
     public UUID getId() {
         return id;
     }
