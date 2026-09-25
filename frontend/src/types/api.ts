@@ -9,6 +9,7 @@ export interface DashboardMetrics {
 export type IncidentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CANCELLED';
 export type UserRole = 'ADMIN' | 'TECHNICIAN' | 'OPERATOR';
+export type MachineStatus = 'RUNNING' | 'STOPPED' | 'MAINTENANCE' | 'INACTIVE';
 
 export interface Incident {
   id: string;
@@ -21,6 +22,27 @@ export interface Incident {
   status: IncidentStatus;
   occurredAt: string;
   createdAt: string;
+}
+
+export interface Machine {
+  id: string;
+  productionLineId: string;
+  productionLine: string;
+  name: string;
+  assetCode: string;
+  manufacturer: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  status: MachineStatus;
+  installedAt: string | null;
+}
+
+export interface CreateIncidentInput {
+  machineId: string;
+  title: string;
+  description: string;
+  priority: IncidentPriority;
+  occurredAt?: string;
 }
 
 export interface AuthUser {
