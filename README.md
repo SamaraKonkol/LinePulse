@@ -12,6 +12,7 @@ Industrial maintenance and operations platform for managing production assets, i
 - Spring Data JPA
 - Bean Validation
 - JWT authentication
+- OpenAPI / Swagger UI
 - PostgreSQL
 - Flyway
 - Maven
@@ -51,29 +52,33 @@ Industrial maintenance and operations platform for managing production assets, i
 
 - User registration and login with BCrypt password hashing and JWT
 - Role-based API authorization
-- Machine listing and status updates
+- Machine listing and operational status updates
 - Incident registration from the dashboard
-- Maintenance work order creation for technicians and administrators
+- Maintenance work order creation and lifecycle transitions
+- Downtime registration and closing from the dashboard
+- Availability calculation using real downtime intervals
+- MTTR calculation using completed maintenance orders from the last 30 days
 - PostgreSQL schema managed with Flyway migrations
-- Dashboard metrics backed by API data
-- Availability calculation using downtime records
+- OpenAPI documentation with Bearer JWT authentication
+- Unit tests for maintenance lifecycle and dashboard indicators
 - Responsive React interface
-- CI pipeline validating backend and frontend builds
+- CI pipeline validating backend tests and frontend builds
 
 ## Project structure
 
 ```text
 LinePulse/
 ├── backend/
-│   └── src/main/java/com/linepulse/
-│       ├── asset/
-│       ├── auth/
-│       ├── common/
-│       ├── config/
-│       ├── dashboard/
-│       ├── downtime/
-│       ├── incident/
-│       └── maintenance/
+│   ├── src/main/java/com/linepulse/
+│   │   ├── asset/
+│   │   ├── auth/
+│   │   ├── common/
+│   │   ├── config/
+│   │   ├── dashboard/
+│   │   ├── downtime/
+│   │   ├── incident/
+│   │   └── maintenance/
+│   └── src/test/java/com/linepulse/
 ├── frontend/
 │   └── src/
 ├── docs/
@@ -106,6 +111,22 @@ npm run dev
 
 The default local API URL is `http://localhost:8080/api` and the frontend runs on `http://localhost:5173`.
 
+## API documentation
+
+With the backend running locally:
+
+```text
+http://localhost:8080/swagger-ui/index.html
+```
+
+The OpenAPI specification is available at:
+
+```text
+http://localhost:8080/v3/api-docs
+```
+
+Authenticate through `/api/auth/login`, copy the returned token and use the Swagger `Authorize` control for protected endpoints.
+
 ## Environment variables
 
 Backend production environments should define at least:
@@ -126,12 +147,10 @@ VITE_API_URL
 
 ## Roadmap
 
-- Complete maintenance lifecycle transitions
-- Downtime registration from the interface
-- MTTR and maintenance indicators
-- Swagger / OpenAPI documentation
-- Automated service and integration tests
+- Incident and maintenance history views
+- More service and integration tests
 - Audit history
+- Operational charts and trend analysis
 - AI-assisted incident classification
 - Production deployment
 
