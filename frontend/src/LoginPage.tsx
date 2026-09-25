@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import BrandLogo from './brand/BrandLogo';
 import { login, register, storeAuth } from './services/api';
 import type { AuthResponse } from './types/api';
 
@@ -37,8 +38,8 @@ function LoginPage({ onAuthenticated }: Props) {
   return (
     <main className="auth-shell">
       <section className="auth-intro">
-        <div className="brand-mark auth-brand">LP</div>
-        <span className="eyebrow">LinePulse</span>
+        <BrandLogo variant="horizontal" className="auth-brand-lockup" />
+        <span className="eyebrow">Operação conectada</span>
         <h1>Operações industriais com contexto, prioridade e histórico.</h1>
         <p>Centralize ocorrências, ordens de manutenção e disponibilidade da planta em uma única visão.</p>
         <div className="auth-note">
