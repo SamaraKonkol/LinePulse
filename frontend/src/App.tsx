@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, AlertTriangle, Factory, LogOut, Wrench } from 'lucide-react';
+import { Activity, AlertTriangle, Factory, LogOut, Timer, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import IncidentModal from './IncidentModal';
 import LoginPage from './LoginPage';
 import MachinesPanel from './MachinesPanel';
 import WorkOrderModal from './WorkOrderModal';
-import { clearAuth, createIncident, createWorkOrder, getDashboardMetrics, getIncidents, getMachines, getStoredAuth, getWorkOrders } from './services/api';
+import { clearAuth, completeWorkOrder, createIncident, createWorkOrder, getDashboardMetrics, getIncidents, getMachines, getStoredAuth, getWorkOrders, startWorkOrder } from './services/api';
 import type { AuthResponse, IncidentPriority, WorkOrderPriority } from './types/api';
 
 const priorityMeta: Record<IncidentPriority | WorkOrderPriority, { label: string; className: string }> = {
@@ -59,6 +59,16 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
     },
   });
 
+  const workOrderTransitionMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: 'start' | 'complete' }) => action === 'start' ? startWorkOrder(id) : completeWorkOrder(id),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['work-orders'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+      ]);
+    },
+  });
+
   const dashboard = dashboardQuery.data;
   const availability = dashboard?.availabilityPercentage ?? 0;
   const recentIncidents = (incidentsQuery.data ?? [])
@@ -72,6 +82,7 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
     { label: 'Ocorrências abertas', value: dashboard?.openIncidents ?? '—', icon: AlertTriangle },
     { label: 'Ordens em andamento', value: dashboard?.activeWorkOrders ?? '—', icon: Wrench },
     { label: 'Disponibilidade', value: dashboard ? `${dashboard.availabilityPercentage.toFixed(1)}%` : '—', icon: Activity },
+    { label: 'MTTR · 30 dias', value: dashboard ? `${dashboard.mttrMinutes.toFixed(1)} min` : '—', icon: Timer },
   ];
   const hasConnectionError = dashboardQuery.isError || incidentsQuery.isError || machinesQuery.isError || workOrdersQuery.isError;
 
@@ -107,6 +118,7 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
         {hasConnectionError && <div className="connection-banner">Não foi possível carregar todos os dados da API.</div>}
         {createIncidentMutation.isError && <div className="connection-banner">Não foi possível registrar a ocorrência.</div>}
         {createWorkOrderMutation.isError && <div className="connection-banner">Não foi possível criar a ordem de manutenção.</div>}
+        {workOrderTransitionMutation.isError && <div className="connection-banner">Não foi possível atualizar a ordem de manutenção.</div>}
 
         <div className="metrics-grid">
           {metrics.map(({ label, value, icon: Icon }) => (
@@ -178,11 +190,19 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
               const priority = priorityMeta[order.priority];
               return (
                 <article className="work-order-row" key={order.id}>
-                  <div>
+                  <div className="work-order-copy">
                     <strong>{order.assetCode} · {order.title}</strong>
                     <small>{maintenanceTypeLabel[order.type]} · {order.machineName}</small>
                   </div>
-                  <span className={`badge ${priority.className}`}>{priority.label}</span>
+                  <div className="work-order-actions">
+                    <span className={`badge ${priority.className}`}>{priority.label}</span>
+                    {canManageMaintenance && order.status === 'OPEN' && (
+                      <button className="order-action" disabled={workOrderTransitionMutation.isPending} onClick={() => workOrderTransitionMutation.mutate({ id: order.id, action: 'start' })}>Iniciar</button>
+                    )}
+                    {canManageMaintenance && order.status === 'IN_PROGRESS' && (
+                      <button className="order-action complete" disabled={workOrderTransitionMutation.isPending} onClick={() => workOrderTransitionMutation.mutate({ id: order.id, action: 'complete' })}>Concluir</button>
+                    )}
+                  </div>
                 </article>
               );
             })}

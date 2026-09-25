@@ -81,4 +81,14 @@ export async function createWorkOrder(input: CreateWorkOrderInput) {
   return response.data;
 }
 
+export async function startWorkOrder(id: string) {
+  const response = await api.patch<WorkOrder>(`/work-orders/${id}/start`);
+  return response.data;
+}
+
+export async function completeWorkOrder(id: string) {
+  const response = await api.patch<WorkOrder>(`/work-orders/${id}/complete`);
+  return response.data;
+}
+
 export default api;

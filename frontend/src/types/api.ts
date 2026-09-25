@@ -4,6 +4,7 @@ export interface DashboardMetrics {
   openIncidents: number;
   activeWorkOrders: number;
   availabilityPercentage: number;
+  mttrMinutes: number;
 }
 
 export type IncidentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
