@@ -21,7 +21,6 @@
 .brand-image { display: block; object-fit: contain; }
 .brand-image-icon { width: 42px; height: 42px; }
 .brand-image-emblem { width: 128px; height: 128px; }
-
 .brand-horizontal { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
 .brand-horizontal-emblem { width: 54px; height: 54px; object-fit: contain; flex: 0 0 auto; }
 .brand-horizontal-copy { display: grid; gap: 1px; min-width: 0; }
@@ -29,11 +28,11 @@
 .brand-horizontal-copy span { color: var(--lp-copper-700); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 
 .sidebar { border-right-color: #d8dfda; box-shadow: 10px 0 34px rgba(46, 64, 55, .025); }
+.brand-mark { background: transparent var(--lp-icon-image) center/contain no-repeat !important; color: transparent !important; border-radius: 0 !important; box-shadow: none !important; }
 .sidebar-brand { margin-bottom: 30px; }
 .sidebar-brand .brand-horizontal-emblem { width: 46px; height: 46px; }
 .sidebar-brand .brand-horizontal-copy strong { font-size: 18px; }
 .sidebar-brand .brand-horizontal-copy span { font-size: 8px; }
-
 .nav-item { border: 1px solid transparent; }
 .nav-item:hover { background: #f2f7f3; color: var(--lp-green-800); border-color: #e1e9e3; }
 .nav-item.active { background: linear-gradient(90deg, #eef6f1 0%, #fbf6f1 100%); color: var(--lp-green-900); border-color: #dfe7e1; box-shadow: inset 3px 0 0 var(--lp-copper-500); }
@@ -42,7 +41,6 @@
 
 .eyebrow { color: var(--lp-copper-700); }
 .page-header h1 { color: var(--lp-steel-900); }
-
 .primary-button { background: var(--lp-green-800); box-shadow: 0 6px 16px rgba(29, 87, 69, .12); }
 .primary-button:hover { background: var(--lp-green-900); }
 .secondary-button { border-color: var(--lp-border-copper) !important; background: var(--lp-surface-warm) !important; color: var(--lp-copper-700) !important; }
@@ -56,11 +54,9 @@
 .metric-card:nth-child(4) .metric-icon { background: #eaf4f0; color: var(--lp-verdigris-600); }
 .metric-icon { background: #eef6f1; color: var(--lp-green-800); }
 .metric-card strong { color: var(--lp-steel-900); }
-
 .availability-panel { position: relative; overflow: hidden; }
 .availability-panel::after { content: ''; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, var(--lp-green-700), var(--lp-verdigris-600), var(--lp-copper-500)); }
 .availability-bar span { background: linear-gradient(90deg, var(--lp-green-700), var(--lp-verdigris-600)); }
-
 .badge.warning { background: #fbefe6; color: var(--lp-copper-700); }
 .status-dot.warning { background: var(--lp-copper-500); }
 
