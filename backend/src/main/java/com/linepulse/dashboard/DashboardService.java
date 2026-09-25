@@ -6,6 +6,7 @@ import com.linepulse.downtime.Downtime;
 import com.linepulse.downtime.DowntimeRepository;
 import com.linepulse.incident.IncidentRepository;
 import com.linepulse.incident.IncidentStatus;
+import com.linepulse.maintenance.WorkOrder;
 import com.linepulse.maintenance.WorkOrderRepository;
 import com.linepulse.maintenance.WorkOrderStatus;
 import java.time.Duration;
@@ -35,7 +36,8 @@ public class DashboardService {
         long openIncidents = incidentRepository.countByStatusIn(List.of(IncidentStatus.OPEN, IncidentStatus.IN_PROGRESS));
         long activeWorkOrders = workOrderRepository.countByStatusIn(List.of(WorkOrderStatus.OPEN, WorkOrderStatus.IN_PROGRESS));
         double availability = calculateAvailability(totalMachines);
-        return new DashboardMetrics(totalMachines, activeMachines, openIncidents, activeWorkOrders, availability);
+        double mttr = calculateMttr();
+        return new DashboardMetrics(totalMachines, activeMachines, openIncidents, activeWorkOrders, availability, mttr);
     }
 
     private double calculateAvailability(long machineCount) {
@@ -50,6 +52,17 @@ public class DashboardService {
         double totalSeconds = machineCount * Duration.ofHours(24).toSeconds();
         double availability = Math.max(0.0, 100.0 * (1.0 - downtimeSeconds / totalSeconds));
         return Math.round(availability * 10.0) / 10.0;
+    }
+
+    private double calculateMttr() {
+        Instant thirtyDaysAgo = Instant.now().minus(Duration.ofDays(30));
+        List<WorkOrder> completed = workOrderRepository.findByStatusAndCompletedAtAfter(WorkOrderStatus.COMPLETED, thirtyDaysAgo);
+        double averageMinutes = completed.stream()
+                .filter(order -> order.getStartedAt() != null && order.getCompletedAt() != null)
+                .mapToLong(order -> Duration.between(order.getStartedAt(), order.getCompletedAt()).toMinutes())
+                .average()
+                .orElse(0.0);
+        return Math.round(averageMinutes * 10.0) / 10.0;
     }
 
     private long overlapSeconds(Downtime downtime, Instant start, Instant end) {

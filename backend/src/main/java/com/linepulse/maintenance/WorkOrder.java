@@ -62,51 +62,28 @@ public class WorkOrder {
         this.updatedAt = updatedAt;
     }
 
-    public UUID getId() {
-        return id;
+    public void start(Instant startedAt) {
+        this.status = WorkOrderStatus.IN_PROGRESS;
+        this.startedAt = startedAt;
+        this.updatedAt = startedAt;
     }
 
-    public Machine getMachine() {
-        return machine;
+    public void complete(Instant completedAt) {
+        this.status = WorkOrderStatus.COMPLETED;
+        this.completedAt = completedAt;
+        this.updatedAt = completedAt;
     }
 
-    public Incident getIncident() {
-        return incident;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public MaintenanceType getType() {
-        return type;
-    }
-
-    public WorkOrderPriority getPriority() {
-        return priority;
-    }
-
-    public WorkOrderStatus getStatus() {
-        return status;
-    }
-
-    public Instant getScheduledFor() {
-        return scheduledFor;
-    }
-
-    public Instant getStartedAt() {
-        return startedAt;
-    }
-
-    public Instant getCompletedAt() {
-        return completedAt;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
+    public UUID getId() { return id; }
+    public Machine getMachine() { return machine; }
+    public Incident getIncident() { return incident; }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public MaintenanceType getType() { return type; }
+    public WorkOrderPriority getPriority() { return priority; }
+    public WorkOrderStatus getStatus() { return status; }
+    public Instant getScheduledFor() { return scheduledFor; }
+    public Instant getStartedAt() { return startedAt; }
+    public Instant getCompletedAt() { return completedAt; }
+    public Instant getCreatedAt() { return createdAt; }
 }

@@ -2,6 +2,7 @@ package com.linepulse.maintenance;
 
 import com.linepulse.asset.Machine;
 import com.linepulse.asset.MachineRepository;
+import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
 import com.linepulse.incident.Incident;
 import com.linepulse.incident.IncidentRepository;
@@ -50,6 +51,31 @@ public class WorkOrderService {
                 now
         );
         return WorkOrderResponse.from(workOrderRepository.save(workOrder));
+    }
+
+    @Transactional
+    public WorkOrderResponse start(UUID id) {
+        WorkOrder workOrder = findById(id);
+        if (workOrder.getStatus() != WorkOrderStatus.OPEN) {
+            throw new ConflictException("Only open work orders can be started");
+        }
+        workOrder.start(Instant.now());
+        return WorkOrderResponse.from(workOrder);
+    }
+
+    @Transactional
+    public WorkOrderResponse complete(UUID id) {
+        WorkOrder workOrder = findById(id);
+        if (workOrder.getStatus() != WorkOrderStatus.IN_PROGRESS) {
+            throw new ConflictException("Only work orders in progress can be completed");
+        }
+        workOrder.complete(Instant.now());
+        return WorkOrderResponse.from(workOrder);
+    }
+
+    private WorkOrder findById(UUID id) {
+        return workOrderRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Work order not found"));
     }
 
     private Incident resolveIncident(UUID incidentId, Machine machine) {

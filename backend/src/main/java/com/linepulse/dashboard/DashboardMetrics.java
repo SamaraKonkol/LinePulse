@@ -5,6 +5,7 @@ public record DashboardMetrics(
         long activeMachines,
         long openIncidents,
         long activeWorkOrders,
-        double availabilityPercentage
+        double availabilityPercentage,
+        double mttrMinutes
 ) {
 }
