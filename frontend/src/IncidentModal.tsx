@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import './incident-modal.css';
 import type { IncidentPriority, Machine } from './types/api';
 
 type IncidentDraft = {
