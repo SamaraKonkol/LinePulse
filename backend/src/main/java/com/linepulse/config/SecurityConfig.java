@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -25,7 +26,14 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**", "/api/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/incidents").hasAnyRole("OPERATOR", "TECHNICIAN", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/machines").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/work-orders", "/api/work-orders/**", "/api/downtimes", "/api/downtimes/**")
+                        .hasAnyRole("TECHNICIAN", "ADMIN")
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
