@@ -42,6 +42,14 @@ public class UserAccount {
         this.updatedAt = updatedAt;
     }
 
+    public void synchronizeDemoProfile(String name, String passwordHash, UserRole role, Instant updatedAt) {
+        this.name = name;
+        this.passwordHash = passwordHash;
+        this.role = role;
+        this.active = true;
+        this.updatedAt = updatedAt;
+    }
+
     public UUID getId() {
         return id;
     }
