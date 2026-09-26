@@ -39,7 +39,7 @@ public class AdminUserService {
     public AdminUserResponse create(AdminCreateUserRequest request) {
         String registration = normalizeRegistration(request.registration());
         if (userRepository.existsByRegistrationIgnoreCase(registration)) {
-            throw new ConflictException("Employee registration is already registered");
+            throw new ConflictException("Este cadastro de funcionário já está em uso.");
         }
 
         Instant now = Instant.now();
@@ -85,15 +85,15 @@ public class AdminUserService {
 
     private UserAccount findUser(UUID userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
     }
 
     private void validateEditable(UserAccount user, String actorRegistration) {
         if (user.getRegistration().equalsIgnoreCase(actorRegistration)) {
-            throw new ConflictException("You cannot change or delete your own administrative access");
+            throw new ConflictException("Você não pode alterar ou excluir o próprio acesso administrativo.");
         }
         if (DEMO_REGISTRATIONS.contains(user.getRegistration())) {
-            throw new ConflictException("Demo accounts have fixed access");
+            throw new ConflictException("As contas demo possuem acesso fixo e não podem ser alteradas.");
         }
     }
 

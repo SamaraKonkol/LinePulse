@@ -38,6 +38,10 @@ export interface Machine {
   id: string;
   productionLineId: string;
   productionLine: string;
+  sectorId: string;
+  sector: string;
+  plantId: string;
+  plant: string;
   name: string;
   assetCode: string;
   manufacturer: string | null;
@@ -47,8 +51,28 @@ export interface Machine {
   installedAt: string | null;
 }
 
+export interface Plant {
+  id: string;
+  name: string;
+  code: string;
+  active: boolean;
+}
+
+export interface Sector {
+  id: string;
+  plantId: string;
+  plant: string;
+  name: string;
+  code: string;
+  active: boolean;
+}
+
 export interface ProductionLine {
   id: string;
+  sectorId: string;
+  sector: string;
+  plantId: string;
+  plant: string;
   name: string;
   code: string;
   active: boolean;

@@ -27,8 +27,31 @@ public class ProductionLine {
     protected ProductionLine() {
     }
 
+    public ProductionLine(UUID id, Sector sector, String name, String code, boolean active, Instant createdAt) {
+        this.id = id;
+        this.sector = sector;
+        this.name = name;
+        this.code = code;
+        this.active = active;
+        this.createdAt = createdAt;
+    }
+
+    public void update(Sector sector, String name, String code) {
+        this.sector = sector;
+        this.name = name;
+        this.code = code;
+    }
+
+    public void changeActive(boolean active) {
+        this.active = active;
+    }
+
     public UUID getId() {
         return id;
+    }
+
+    public Sector getSector() {
+        return sector;
     }
 
     public String getName() {

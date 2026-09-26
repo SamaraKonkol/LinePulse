@@ -19,6 +19,23 @@ public class Plant {
     protected Plant() {
     }
 
+    public Plant(UUID id, String name, String code, boolean active, Instant createdAt) {
+        this.id = id;
+        this.name = name;
+        this.code = code;
+        this.active = active;
+        this.createdAt = createdAt;
+    }
+
+    public void update(String name, String code) {
+        this.name = name;
+        this.code = code;
+    }
+
+    public void changeActive(boolean active) {
+        this.active = active;
+    }
+
     public UUID getId() {
         return id;
     }
@@ -29,5 +46,9 @@ public class Plant {
 
     public String getCode() {
         return code;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 }
