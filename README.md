@@ -37,6 +37,8 @@ Industrial maintenance and operations platform for managing production assets, i
 - Docker
 - Docker Compose
 - GitHub Actions
+- GitHub Pages
+- Render
 
 ## Architecture
 
@@ -63,34 +65,44 @@ Controller -> Service -> Repository -> PostgreSQL
 
 ## Roles
 
-- `ADMIN` — administrative access, machine registration, user management and operational management
-- `TECHNICIAN` — maintenance operations, incident handling and machine status management
-- `OPERATOR` — operational access and incident reporting
+- `ADMIN` — industrial structure, assets, users and operational management
+- `TECHNICIAN` — maintenance execution, incident handling, downtime and operational machine status
+- `OPERATOR` — operational visibility and incident reporting
 
 ## Current features
 
 - Closed-access authentication using employee registration + BCrypt password + JWT
 - Administrator-only user creation, role management, activation/deactivation and deletion
-- Role-based API authorization
-- Machine listing, administrator-managed machine registration/editing and operational status updates
+- Role-based API authorization enforced in the backend
+- Industrial hierarchy administration: plant → sector → production line → machine
+- Activation/deactivation lifecycle for plants, sectors and production lines
+- Machine registration and structural editing restricted to administrators
+- Machine retirement/reactivation restricted to administrators
+- Machine operational status management for technicians and administrators
+- Machine search and filters by line, status and manufacturer
+- Individual machine workspace with asset data, 24-hour availability, MTTR, incidents, work orders, downtime and event timeline
 - Incident creation and lifecycle: open, in progress, resolved and cancelled
 - Searchable incident history with status and priority filters
 - Maintenance work order creation, start and completion lifecycle
 - Searchable maintenance history with status, type and priority filters
 - Downtime registration and closing
 - Availability calculation using real downtime intervals
-- MTTR calculation using completed maintenance orders from the last 30 days
+- MTTR calculation using completed maintenance orders
+- Operational indicators grouped by production line and machine
+- Operational risk list for assets that require attention
+- Interactive dashboard cards that navigate to the related operational context
 - Seven-day incident trend chart backed by API data
 - Operational alerts for critical incidents, prolonged downtime and critical work orders
 - Persistent audit trail with authenticated employee registration and timestamp
-- Recent operational activity feed for technician and admin roles
+- Audit filters by employee registration, action, entity and period
+- Administrator user filters by name/registration, role and status
+- API-derived error messages for administrative and operational actions
+- Responsive React interface with green, copper, steel and verdigris visual identity
 - PostgreSQL schema managed with Flyway migrations
 - OpenAPI documentation with Bearer JWT authentication
-- Unit tests for maintenance, incident lifecycle, alerts and dashboard indicators
-- PostgreSQL integration tests covering registration-based JWT authorization and administrator-only user management
-- Responsive React interface
+- Unit and integration tests for lifecycle, authorization, incidents, maintenance, alerts and dashboard indicators
 - CI pipeline validating backend tests, frontend build and Docker Compose build
-- Full local stack with Docker Compose
+- Production frontend on GitHub Pages and API/PostgreSQL deployment prepared for Render
 
 ## Project structure
 
@@ -234,14 +246,14 @@ The Docker Compose configuration uses local development defaults and supports ov
 
 ## Roadmap
 
-- Additional domain integration tests
 - External notification delivery rules (webhook)
 - AI-assisted incident classification
-- Production deployment hardening
+- Additional operational analytics and export
+- Production observability and deployment hardening
 
 ## Status
 
-Functional MVP in active development.
+LinePulse v1 — functional operational platform in active development.
 
 ## Author
 
