@@ -33,6 +33,11 @@ public class MachineController {
         return ResponseEntity.created(URI.create("/api/machines/" + created.id())).body(created);
     }
 
+    @PatchMapping("/{machineId}")
+    MachineResponse update(@PathVariable UUID machineId, @Valid @RequestBody UpdateMachineRequest request) {
+        return machineService.update(machineId, request);
+    }
+
     @PatchMapping("/{machineId}/status")
     MachineResponse updateStatus(@PathVariable UUID machineId, @Valid @RequestBody UpdateMachineStatusRequest request) {
         return machineService.updateStatus(machineId, request);
