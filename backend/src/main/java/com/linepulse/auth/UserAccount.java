@@ -16,7 +16,7 @@ public class UserAccount {
     private UUID id;
 
     private String name;
-    private String email;
+    private String registration;
 
     @Column(name = "password_hash")
     private String passwordHash;
@@ -31,10 +31,10 @@ public class UserAccount {
     protected UserAccount() {
     }
 
-    public UserAccount(UUID id, String name, String email, String passwordHash, UserRole role, boolean active, Instant createdAt, Instant updatedAt) {
+    public UserAccount(UUID id, String name, String registration, String passwordHash, UserRole role, boolean active, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.name = name;
-        this.email = email;
+        this.registration = registration;
         this.passwordHash = passwordHash;
         this.role = role;
         this.active = active;
@@ -68,8 +68,8 @@ public class UserAccount {
         return name;
     }
 
-    public String getEmail() {
-        return email;
+    public String getRegistration() {
+        return registration;
     }
 
     public String getPasswordHash() {
