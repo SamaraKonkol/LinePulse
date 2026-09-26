@@ -32,8 +32,8 @@ export function getStoredAuth(): AuthResponse | null {
 export function storeAuth(auth: AuthResponse) { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth)); }
 export function clearAuth() { localStorage.removeItem(AUTH_STORAGE_KEY); }
 
-export async function login(email: string, password: string) {
-  const response = await api.post<AuthResponse>('/auth/login', { email, password });
+export async function login(registration: string, password: string) {
+  const response = await api.post<AuthResponse>('/auth/login', { registration, password });
   return response.data;
 }
 
@@ -87,7 +87,7 @@ export async function getAdminUsers() {
   return response.data;
 }
 
-export async function createAdminUser(input: { name: string; email: string; password: string; role: UserRole }) {
+export async function createAdminUser(input: { name: string; registration: string; password: string; role: UserRole }) {
   const response = await api.post<AdminUser>('/admin/users', input);
   return response.data;
 }
@@ -100,6 +100,10 @@ export async function updateAdminUserRole(userId: string, role: UserRole) {
 export async function updateAdminUserStatus(userId: string, active: boolean) {
   const response = await api.patch<AdminUser>(`/admin/users/${userId}/status`, { active });
   return response.data;
+}
+
+export async function deleteAdminUser(userId: string) {
+  await api.delete(`/admin/users/${userId}`);
 }
 
 export async function getProductionLines() {
