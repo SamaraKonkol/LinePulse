@@ -21,7 +21,7 @@ For the current scope, a modular monolith provides:
 
 ## Backend modules
 
-- `asset` — plants, sectors, production lines and machines;
+- `asset` — plants, sectors, production lines, machine hierarchy and asset lifecycle;
 - `auth` — employee registrations, administrator-managed accounts, login, roles, JWT generation and authentication;
 - `incident` — operational incident registration and lifecycle;
 - `maintenance` — maintenance work orders and lifecycle transitions;
@@ -32,8 +32,6 @@ For the current scope, a modular monolith provides:
 - `config` — security, CORS and OpenAPI configuration.
 
 ## Request flow
-
-The main backend flow is:
 
 ```text
 HTTP request
@@ -61,20 +59,40 @@ Controllers translate HTTP requests into application calls. Services contain bus
 
 Reloading the user on each authenticated request means disabling, deleting or changing the role of a user takes effect without waiting for an already-issued token to expire.
 
+## Industrial structure
+
+Assets belong to an explicit hierarchy:
+
+```text
+Plant
+  ↓
+Sector
+  ↓
+Production line
+  ↓
+Machine
+```
+
+Administrators create and manage the first three levels. Each level can be activated or deactivated without deleting its historical records. A machine can only be created or moved into a line when the line, sector and plant are active.
+
+Machine `INACTIVE` status represents asset retirement from active operation. Technicians can manage operational states such as running, stopped and maintenance, while only administrators can retire or reactivate an asset.
+
 ## Roles
 
 | Capability | OPERATOR | TECHNICIAN | ADMIN |
 | --- | :---: | :---: | :---: |
 | View dashboard | ✓ | ✓ | ✓ |
-| View machines | ✓ | ✓ | ✓ |
+| View machines and machine details | ✓ | ✓ | ✓ |
 | Open incidents | ✓ | ✓ | ✓ |
 | Start/resolve/cancel incidents |  | ✓ | ✓ |
 | Create work orders |  | ✓ | ✓ |
 | Start/complete work orders |  | ✓ | ✓ |
 | Register downtime |  | ✓ | ✓ |
 | Close downtime |  | ✓ | ✓ |
-| Change machine status |  | ✓ | ✓ |
+| Change operational machine status |  | ✓ | ✓ |
+| Retire/reactivate machines |  |  | ✓ |
 | Register/edit machines |  |  | ✓ |
+| Manage plants/sectors/lines |  |  | ✓ |
 | Create/manage/delete users |  |  | ✓ |
 | View audit trail |  | ✓ | ✓ |
 
@@ -88,23 +106,28 @@ Availability is calculated over the last 24 hours using active machines and over
 availability = 100 × (1 - downtimeSeconds / availableMachineSeconds)
 ```
 
-Where:
-
-```text
-availableMachineSeconds = activeMachineCount × 24 hours
-```
-
-Downtime intervals are clipped to the 24-hour calculation window so an event that started before the window only contributes the overlapping duration.
+The frontend also derives contextual availability by machine and production line from the same downtime intervals for operational drill-down views.
 
 ### MTTR
 
-MTTR is calculated from maintenance work orders completed during the last 30 days.
+MTTR is calculated from maintenance work orders with both start and completion timestamps.
 
 ```text
 MTTR = average(completedAt - startedAt)
 ```
 
-Only work orders with both timestamps are considered.
+The global dashboard uses completed work orders from the last 30 days. Machine details derive an asset-specific MTTR from the machine's completed orders.
+
+### Operational drill-down
+
+The React application combines machine, incident, work-order and downtime data already loaded through the API to provide:
+
+- per-line availability;
+- downtime accumulated in the last 24 hours;
+- machine attention/risk ordering;
+- machine-specific incident, maintenance and downtime history.
+
+These contextual calculations remain client-side because they do not introduce new persistence or authorization requirements.
 
 ## Audit trail
 
@@ -117,7 +140,7 @@ Operational actions generate persistent audit records containing:
 - authenticated employee registration;
 - timestamp.
 
-Audit records are stored in PostgreSQL and the most recent events are exposed only to technician and admin roles. The actor registration remains in the audit record even if the user account is later deleted.
+Audit records are stored in PostgreSQL and exposed only to technician and admin roles. The actor registration remains in the audit record even if the user account is later deleted. The frontend can filter the loaded audit trail by registration, action, entity and time window.
 
 ## Database evolution
 
@@ -143,17 +166,15 @@ After write operations, related query keys are invalidated so the dashboard refr
 
 ## Deployment model
 
-The local stack contains three services:
-
 ```text
-Nginx + React
-      ↓
-Spring Boot API
-      ↓
-PostgreSQL
+GitHub Pages / React
+        ↓
+Render / Spring Boot API
+        ↓
+Render / PostgreSQL
 ```
 
-Docker Compose builds and connects all three. GitHub Actions validates backend tests, the frontend production build and the complete Docker build on pushes and pull requests.
+Docker Compose provides the equivalent local stack. GitHub Actions validates backend tests, the frontend production build and the complete Docker build on pushes and pull requests.
 
 ## Current tradeoffs
 
