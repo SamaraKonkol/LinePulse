@@ -61,7 +61,9 @@ function MachineAdminModal({ machine, productionLines, loading, onClose, onSubmi
           <label>
             Linha de produção
             <select value={productionLineId} onChange={(event) => setProductionLineId(event.target.value)} required>
-              {activeLines.map((line) => <option key={line.id} value={line.id}>{line.code} · {line.name}</option>)}
+              {activeLines.map((line) => (
+                <option key={line.id} value={line.id}>{line.code === line.name ? line.name : `${line.code} · ${line.name}`}</option>
+              ))}
             </select>
           </label>
 

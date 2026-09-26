@@ -3,7 +3,7 @@ import { Pencil, Plus, ShieldCheck, UserRoundCog } from 'lucide-react';
 import { useState } from 'react';
 import MachineAdminModal, { type MachineDraft } from './MachineAdminModal';
 import { createMachine, getAdminUsers, getProductionLines, updateAdminUserRole, updateAdminUserStatus, updateMachine } from './services/api';
-import type { Machine, UserRole } from './types/api';
+import type { Machine, ProductionLine, UserRole } from './types/api';
 import './admin.css';
 
 type Props = {
@@ -23,6 +23,22 @@ function AdminPanel({ currentUserId, machines }: Props) {
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
   const usersQuery = useQuery({ queryKey: ['admin-users'], queryFn: getAdminUsers });
   const linesQuery = useQuery({ queryKey: ['admin-production-lines'], queryFn: getProductionLines });
+
+  const fallbackProductionLines: ProductionLine[] = Array.from(
+    new Map(
+      machines.map((machine) => [
+        machine.productionLineId,
+        {
+          id: machine.productionLineId,
+          name: machine.productionLine,
+          code: machine.productionLine,
+          active: true,
+        },
+      ])
+    ).values()
+  );
+
+  const productionLines = (linesQuery.data?.length ?? 0) > 0 ? linesQuery.data! : fallbackProductionLines;
 
   const refreshAdmin = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
@@ -80,7 +96,7 @@ function AdminPanel({ currentUserId, machines }: Props) {
     createMachineMutation.mutate(draft);
   }
 
-  const hasError = usersQuery.isError || linesQuery.isError || roleMutation.isError || statusMutation.isError || createMachineMutation.isError || editMachineMutation.isError;
+  const mutationError = roleMutation.isError || statusMutation.isError || createMachineMutation.isError || editMachineMutation.isError;
   const savingMachine = createMachineMutation.isPending || editMachineMutation.isPending;
 
   return (
@@ -94,7 +110,8 @@ function AdminPanel({ currentUserId, machines }: Props) {
         <ShieldCheck size={30} />
       </div>
 
-      {hasError && <div className="connection-banner">Uma ação administrativa não pôde ser concluída.</div>}
+      {mutationError && <div className="connection-banner">Uma ação administrativa não pôde ser concluída.</div>}
+      {linesQuery.isError && productionLines.length > 0 && <div className="admin-inline-note">Linhas carregadas a partir dos ativos existentes. A sincronização administrativa será retomada quando a API estiver disponível.</div>}
 
       <div className="admin-grid">
         <article className="panel admin-card">
@@ -103,10 +120,12 @@ function AdminPanel({ currentUserId, machines }: Props) {
               <span className="eyebrow">Estrutura industrial</span>
               <h3>Cadastro de máquinas</h3>
             </div>
-            <button className="secondary-button" type="button" onClick={() => setMachineModalOpen(true)} disabled={linesQuery.isLoading || (linesQuery.data?.length ?? 0) === 0}>
+            <button className="secondary-button" type="button" onClick={() => setMachineModalOpen(true)} disabled={productionLines.length === 0}>
               <Plus size={16} /> Nova máquina
             </button>
           </div>
+
+          {productionLines.length === 0 && <div className="empty-state">Nenhuma linha de produção disponível para cadastrar uma máquina.</div>}
 
           <div className="admin-list">
             {machines.map((machine) => (
@@ -133,6 +152,7 @@ function AdminPanel({ currentUserId, machines }: Props) {
           </div>
 
           {usersQuery.isLoading && <div className="empty-state">Carregando usuários...</div>}
+          {usersQuery.isError && <div className="empty-state">A gestão de usuários ainda não respondeu pela API.</div>}
           <div className="admin-users">
             {(usersQuery.data ?? []).map((user) => {
               const locked = user.demoAccount || user.id === currentUserId;
@@ -170,7 +190,7 @@ function AdminPanel({ currentUserId, machines }: Props) {
       {(machineModalOpen || editingMachine) && (
         <MachineAdminModal
           machine={editingMachine}
-          productionLines={linesQuery.data ?? []}
+          productionLines={productionLines}
           loading={savingMachine}
           onClose={() => { setMachineModalOpen(false); setEditingMachine(null); }}
           onSubmit={submitMachine}
