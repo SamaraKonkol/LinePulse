@@ -47,6 +47,22 @@ export interface Machine {
   installedAt: string | null;
 }
 
+export interface ProductionLine {
+  id: string;
+  name: string;
+  code: string;
+  active: boolean;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  active: boolean;
+  demoAccount: boolean;
+}
+
 export interface WorkOrder {
   id: string;
   machineId: string;
@@ -119,6 +135,27 @@ export interface CreateDowntimeInput {
   incidentId?: string;
   reason: string;
   startedAt?: string;
+}
+
+export interface CreateMachineInput {
+  productionLineId: string;
+  name: string;
+  assetCode: string;
+  manufacturer?: string;
+  model?: string;
+  serialNumber?: string;
+  status: MachineStatus;
+  installedAt?: string;
+}
+
+export interface UpdateMachineInput {
+  productionLineId: string;
+  name: string;
+  assetCode: string;
+  manufacturer?: string;
+  model?: string;
+  serialNumber?: string;
+  installedAt?: string;
 }
 
 export interface AuthUser {
