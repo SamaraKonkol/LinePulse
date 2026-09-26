@@ -30,16 +30,16 @@ public class DemoUserInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        synchronizeDemoUser("Administrador Demo", "admin@linepulse.local", UserRole.ADMIN);
-        synchronizeDemoUser("Técnico Demo", "technician@linepulse.local", UserRole.TECHNICIAN);
-        synchronizeDemoUser("Operador Demo", "operator@linepulse.local", UserRole.OPERATOR);
+        synchronizeDemoUser("Administrador Demo", "ADM001", UserRole.ADMIN);
+        synchronizeDemoUser("Técnico Demo", "TEC001", UserRole.TECHNICIAN);
+        synchronizeDemoUser("Operador Demo", "OPE001", UserRole.OPERATOR);
     }
 
-    private void synchronizeDemoUser(String name, String email, UserRole role) {
+    private void synchronizeDemoUser(String name, String registration, UserRole role) {
         Instant now = Instant.now();
         String passwordHash = passwordEncoder.encode(demoPassword);
 
-        userRepository.findByEmailIgnoreCase(email).ifPresentOrElse(
+        userRepository.findByRegistrationIgnoreCase(registration).ifPresentOrElse(
                 existing -> {
                     existing.synchronizeDemoProfile(name, passwordHash, role, now);
                     userRepository.save(existing);
@@ -47,7 +47,7 @@ public class DemoUserInitializer implements ApplicationRunner {
                 () -> userRepository.save(new UserAccount(
                         UUID.randomUUID(),
                         name,
-                        email,
+                        registration,
                         passwordHash,
                         role,
                         true,
