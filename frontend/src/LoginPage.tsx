@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import BrandLogo from './brand/BrandLogo';
-import { login, register, storeAuth } from './services/api';
+import { login, storeAuth } from './services/api';
 import type { AuthResponse } from './types/api';
 
 type Props = {
@@ -14,8 +14,6 @@ const demoAccounts = [
 ];
 
 function LoginPage({ onAuthenticated }: Props) {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -27,15 +25,11 @@ function LoginPage({ onAuthenticated }: Props) {
     setLoading(true);
 
     try {
-      const auth = mode === 'login'
-        ? await login(email, password)
-        : await register(name, email, password);
+      const auth = await login(email, password);
       storeAuth(auth);
       onAuthenticated(auth);
     } catch {
-      setError(mode === 'login'
-        ? 'Não foi possível entrar. Confira e-mail e senha.'
-        : 'Não foi possível criar o acesso. Verifique os dados informados.');
+      setError('Não foi possível entrar. Confira e-mail e senha.');
     } finally {
       setLoading(false);
     }
@@ -57,29 +51,21 @@ function LoginPage({ onAuthenticated }: Props) {
       <section className="auth-panel">
         <div className="auth-card">
           <span className="eyebrow">Acesso ao sistema</span>
-          <h2>{mode === 'login' ? 'Entrar no LinePulse' : 'Criar acesso'}</h2>
-          <p>{mode === 'login' ? 'Use suas credenciais para acessar a operação.' : 'Novos usuários entram inicialmente como operadores.'}</p>
+          <h2>Entrar no LinePulse</h2>
+          <p>Use as credenciais fornecidas pelo administrador da operação.</p>
 
-          {mode === 'login' && (
-            <div className="demo-access">
-              <span>Perfis demo</span>
-              <div className="demo-access-actions">
-                {demoAccounts.map((account) => (
-                  <button type="button" key={account.email} onClick={() => setEmail(account.email)}>
-                    {account.label}
-                  </button>
-                ))}
-              </div>
+          <div className="demo-access">
+            <span>Perfis demo</span>
+            <div className="demo-access-actions">
+              {demoAccounts.map((account) => (
+                <button type="button" key={account.email} onClick={() => setEmail(account.email)}>
+                  {account.label}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
           <form onSubmit={handleSubmit}>
-            {mode === 'register' && (
-              <label>
-                Nome
-                <input value={name} onChange={(event) => setName(event.target.value)} required minLength={2} />
-              </label>
-            )}
             <label>
               E-mail
               <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
@@ -92,13 +78,9 @@ function LoginPage({ onAuthenticated }: Props) {
             {error && <div className="auth-error">{error}</div>}
 
             <button className="primary-button auth-submit" disabled={loading}>
-              {loading ? 'Processando...' : mode === 'login' ? 'Entrar' : 'Criar acesso'}
+              {loading ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
-
-          <button className="auth-switch" type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
-            {mode === 'login' ? 'Ainda não tenho acesso' : 'Já tenho uma conta'}
-          </button>
         </div>
       </section>
     </main>
