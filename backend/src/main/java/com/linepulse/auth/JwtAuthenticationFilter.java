@@ -32,12 +32,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            String email = jwtService.parse(header.substring(7)).getSubject();
-            userRepository.findByEmailIgnoreCase(email)
+            String registration = jwtService.parse(header.substring(7)).getSubject();
+            userRepository.findByRegistrationIgnoreCase(registration)
                     .filter(UserAccount::isActive)
                     .ifPresent(user -> {
                         var authentication = new UsernamePasswordAuthenticationToken(
-                                user.getEmail(),
+                                user.getRegistration(),
                                 null,
                                 List.of(new SimpleGrantedAuthority(user.getRole().authority()))
                         );
