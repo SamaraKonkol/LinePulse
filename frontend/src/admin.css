@@ -1,4 +1,6 @@
-.admin-section { display: grid; gap: 18px; scroll-margin-top: 24px; }
+.admin-nav-item { color: #8f552d; }
+.admin-nav-item:hover { background: #fbf1e8; color: #7a4524; }
+.admin-section { display: grid; gap: 18px; margin-top: 18px; scroll-margin-top: 24px; }
 .admin-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 24px; border: 1px solid #d8e3dc; border-radius: 14px; background: linear-gradient(135deg, #f8fbf8 0%, #fffaf5 100%); }
 .admin-section-heading h2 { margin: 4px 0 6px; }
 .admin-section-heading p { margin: 0; color: #65706a; }
@@ -25,8 +27,13 @@
   .admin-grid { grid-template-columns: 1fr; }
 }
 
+@media (max-width: 980px) {
+  .sidebar nav:has(.admin-nav-item) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
 @media (max-width: 680px) {
   .admin-user-row { align-items: stretch; flex-direction: column; }
   .admin-user-row select, .admin-status-button { max-width: none; width: 100%; }
   .admin-section-heading { align-items: flex-start; }
+  .sidebar nav:has(.admin-nav-item) { grid-template-columns: 1fr 1fr; }
 }
