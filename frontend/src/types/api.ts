@@ -57,7 +57,7 @@ export interface ProductionLine {
 export interface AdminUser {
   id: string;
   name: string;
-  email: string;
+  registration: string;
   role: UserRole;
   active: boolean;
   demoAccount: boolean;
@@ -98,7 +98,7 @@ export interface AuditEvent {
   entityType: string;
   entityId: string;
   description: string;
-  actorEmail: string;
+  actorRegistration: string;
   createdAt: string;
 }
 
@@ -161,7 +161,7 @@ export interface UpdateMachineInput {
 export interface AuthUser {
   id: string;
   name: string;
-  email: string;
+  registration: string;
   role: UserRole;
 }
 
