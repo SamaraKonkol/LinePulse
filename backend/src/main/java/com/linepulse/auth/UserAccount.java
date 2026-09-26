@@ -50,6 +50,16 @@ public class UserAccount {
         this.updatedAt = updatedAt;
     }
 
+    public void changeRole(UserRole role) {
+        this.role = role;
+        this.updatedAt = Instant.now();
+    }
+
+    public void changeActive(boolean active) {
+        this.active = active;
+        this.updatedAt = Instant.now();
+    }
+
     public UUID getId() {
         return id;
     }
