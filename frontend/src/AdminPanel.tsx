@@ -30,8 +30,8 @@ function AdminPanel({ currentUserId, machines }: Props) {
   const [userSearch, setUserSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'ALL' | UserRole>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
-  const usersQuery = useQuery({ queryKey: ['admin-users'], queryFn: getAdminUsers });
-  const linesQuery = useQuery({ queryKey: ['admin-production-lines'], queryFn: getProductionLines });
+  const usersQuery = useQuery({ queryKey: ['admin-users'], queryFn: getAdminUsers, retry: 1 });
+  const linesQuery = useQuery({ queryKey: ['admin-production-lines'], queryFn: getProductionLines, retry: 1 });
 
   const fallbackProductionLines: ProductionLine[] = Array.from(
     new Map(
@@ -132,7 +132,7 @@ function AdminPanel({ currentUserId, machines }: Props) {
       </div>
 
       {mutationError && <div className="connection-banner">{getApiErrorMessage(mutationError, 'Uma ação administrativa não pôde ser concluída.')}</div>}
-      {linesQuery.isError && productionLines.length > 0 && <div className="admin-inline-note">Linhas carregadas a partir dos ativos existentes. A sincronização administrativa será retomada quando a API estiver disponível.</div>}
+      {linesQuery.isError && productionLines.length > 0 && <div className="admin-inline-note">{getApiErrorMessage(linesQuery.error, 'Linhas carregadas a partir dos ativos existentes porque a sincronização administrativa falhou.')}</div>}
 
       <StructureAdminPanel />
 
@@ -195,7 +195,15 @@ function AdminPanel({ currentUserId, machines }: Props) {
           </div>
 
           {usersQuery.isLoading && <div className="empty-state">Carregando usuários...</div>}
-          {usersQuery.isError && <div className="empty-state">A gestão de usuários ainda não respondeu pela API.</div>}
+          {usersQuery.isError && (
+            <div className="empty-state">
+              {getApiErrorMessage(usersQuery.error, 'Não foi possível carregar os usuários.')}
+              {' '}
+              <button className="text-button" type="button" disabled={usersQuery.isFetching} onClick={() => usersQuery.refetch()}>
+                {usersQuery.isFetching ? 'Tentando novamente...' : 'Tentar novamente'}
+              </button>
+            </div>
+          )}
           {!usersQuery.isLoading && !usersQuery.isError && filteredUsers.length === 0 && <div className="empty-state">Nenhum usuário encontrado com esses filtros.</div>}
           <div className="admin-users">
             {filteredUsers.map((user) => {
