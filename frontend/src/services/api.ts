@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AdminUser, AuditEvent, AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateMachineInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, IncidentTrendPoint, Machine, MachineStatus, OperationalAlert, ProductionLine, UpdateMachineInput, UserRole, WorkOrder } from '../types/api';
+import type { AdminUser, AuditEvent, AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateMachineInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, IncidentTrendPoint, Machine, MachineStatus, OperationalAlert, Plant, ProductionLine, Sector, UpdateMachineInput, UserRole, WorkOrder } from '../types/api';
 
 const AUTH_STORAGE_KEY = 'linepulse-auth-v2';
 const LEGACY_AUTH_STORAGE_KEY = 'linepulse-auth';
@@ -113,6 +113,66 @@ export async function deleteAdminUser(userId: string) {
 
 export async function getProductionLines() {
   const response = await api.get<ProductionLine[]>('/admin/production-lines');
+  return response.data;
+}
+
+export async function getPlants() {
+  const response = await api.get<Plant[]>('/admin/structure/plants');
+  return response.data;
+}
+
+export async function createPlant(input: { name: string; code: string }) {
+  const response = await api.post<Plant>('/admin/structure/plants', input);
+  return response.data;
+}
+
+export async function updatePlant(id: string, input: { name: string; code: string }) {
+  const response = await api.patch<Plant>(`/admin/structure/plants/${id}`, input);
+  return response.data;
+}
+
+export async function updatePlantStatus(id: string, active: boolean) {
+  const response = await api.patch<Plant>(`/admin/structure/plants/${id}/status`, { active });
+  return response.data;
+}
+
+export async function getSectors() {
+  const response = await api.get<Sector[]>('/admin/structure/sectors');
+  return response.data;
+}
+
+export async function createSector(input: { plantId: string; name: string; code: string }) {
+  const response = await api.post<Sector>('/admin/structure/sectors', input);
+  return response.data;
+}
+
+export async function updateSector(id: string, input: { plantId: string; name: string; code: string }) {
+  const response = await api.patch<Sector>(`/admin/structure/sectors/${id}`, input);
+  return response.data;
+}
+
+export async function updateSectorStatus(id: string, active: boolean) {
+  const response = await api.patch<Sector>(`/admin/structure/sectors/${id}/status`, { active });
+  return response.data;
+}
+
+export async function getStructureLines() {
+  const response = await api.get<ProductionLine[]>('/admin/structure/lines');
+  return response.data;
+}
+
+export async function createProductionLine(input: { sectorId: string; name: string; code: string }) {
+  const response = await api.post<ProductionLine>('/admin/structure/lines', input);
+  return response.data;
+}
+
+export async function updateProductionLine(id: string, input: { sectorId: string; name: string; code: string }) {
+  const response = await api.patch<ProductionLine>(`/admin/structure/lines/${id}`, input);
+  return response.data;
+}
+
+export async function updateProductionLineStatus(id: string, active: boolean) {
+  const response = await api.patch<ProductionLine>(`/admin/structure/lines/${id}/status`, { active });
   return response.data;
 }
 
