@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AdminUserService {
+    private static final Set<String> DEMO_REGISTRATIONS = Set.of("ADM001", "TEC001", "OPE001");
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
@@ -34,42 +37,50 @@ public class AdminUserService {
 
     @Transactional
     public AdminUserResponse create(AdminCreateUserRequest request) {
-        String email = request.email().trim().toLowerCase(Locale.ROOT);
-        if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new ConflictException("Email is already registered");
+        String registration = normalizeRegistration(request.registration());
+        if (userRepository.existsByRegistrationIgnoreCase(registration)) {
+            throw new ConflictException("Employee registration is already registered");
         }
 
         Instant now = Instant.now();
         UserAccount saved = userRepository.save(new UserAccount(
                 UUID.randomUUID(),
                 request.name().trim(),
-                email,
+                registration,
                 passwordEncoder.encode(request.password()),
                 request.role(),
                 true,
                 now,
                 now
         ));
-        auditService.record("USER_CREATED", "USER", saved.getId(), "Usuário " + saved.getEmail() + " criado como " + saved.getRole());
+        auditService.record("USER_CREATED", "USER", saved.getId(), "Usuário " + saved.getRegistration() + " criado como " + saved.getRole());
         return AdminUserResponse.from(saved);
     }
 
     @Transactional
-    public AdminUserResponse updateRole(UUID userId, UpdateUserRoleRequest request, String actorEmail) {
+    public AdminUserResponse updateRole(UUID userId, UpdateUserRoleRequest request, String actorRegistration) {
         UserAccount user = findUser(userId);
-        validateEditable(user, actorEmail);
+        validateEditable(user, actorRegistration);
         user.changeRole(request.role());
-        auditService.record("USER_ROLE_CHANGED", "USER", user.getId(), "Perfil de " + user.getEmail() + " alterado para " + request.role());
+        auditService.record("USER_ROLE_CHANGED", "USER", user.getId(), "Perfil do cadastro " + user.getRegistration() + " alterado para " + request.role());
         return AdminUserResponse.from(user);
     }
 
     @Transactional
-    public AdminUserResponse updateStatus(UUID userId, UpdateUserStatusRequest request, String actorEmail) {
+    public AdminUserResponse updateStatus(UUID userId, UpdateUserStatusRequest request, String actorRegistration) {
         UserAccount user = findUser(userId);
-        validateEditable(user, actorEmail);
+        validateEditable(user, actorRegistration);
         user.changeActive(request.active());
-        auditService.record("USER_STATUS_CHANGED", "USER", user.getId(), "Usuário " + user.getEmail() + (request.active() ? " ativado" : " desativado"));
+        auditService.record("USER_STATUS_CHANGED", "USER", user.getId(), "Cadastro " + user.getRegistration() + (request.active() ? " ativado" : " desativado"));
         return AdminUserResponse.from(user);
+    }
+
+    @Transactional
+    public void delete(UUID userId, String actorRegistration) {
+        UserAccount user = findUser(userId);
+        validateEditable(user, actorRegistration);
+        auditService.record("USER_DELETED", "USER", user.getId(), "Usuário " + user.getName() + " · cadastro " + user.getRegistration() + " excluído");
+        userRepository.delete(user);
     }
 
     private UserAccount findUser(UUID userId) {
@@ -77,12 +88,16 @@ public class AdminUserService {
                 .orElseThrow(() -> new NotFoundException("User not found"));
     }
 
-    private void validateEditable(UserAccount user, String actorEmail) {
-        if (user.getEmail().equalsIgnoreCase(actorEmail)) {
-            throw new ConflictException("You cannot change your own administrative access");
+    private void validateEditable(UserAccount user, String actorRegistration) {
+        if (user.getRegistration().equalsIgnoreCase(actorRegistration)) {
+            throw new ConflictException("You cannot change or delete your own administrative access");
         }
-        if (user.getEmail().endsWith("@linepulse.local")) {
-            throw new ConflictException("Demo accounts have fixed roles");
+        if (DEMO_REGISTRATIONS.contains(user.getRegistration())) {
+            throw new ConflictException("Demo accounts have fixed access");
         }
+    }
+
+    private String normalizeRegistration(String registration) {
+        return registration.trim().toUpperCase(Locale.ROOT);
     }
 }
