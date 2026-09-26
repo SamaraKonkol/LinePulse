@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { AdminUser, AuditEvent, AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateMachineInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, IncidentTrendPoint, Machine, MachineStatus, OperationalAlert, ProductionLine, UpdateMachineInput, UserRole, WorkOrder } from '../types/api';
 
-const AUTH_STORAGE_KEY = 'linepulse-auth';
+const AUTH_STORAGE_KEY = 'linepulse-auth-v2';
+const LEGACY_AUTH_STORAGE_KEY = 'linepulse-auth';
 const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:8080/api';
 
 const api = axios.create({
@@ -18,6 +19,7 @@ api.interceptors.request.use((config) => {
 });
 
 export function getStoredAuth(): AuthResponse | null {
+  localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
   const raw = localStorage.getItem(AUTH_STORAGE_KEY);
   if (!raw) return null;
 
@@ -30,7 +32,10 @@ export function getStoredAuth(): AuthResponse | null {
 }
 
 export function storeAuth(auth: AuthResponse) { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth)); }
-export function clearAuth() { localStorage.removeItem(AUTH_STORAGE_KEY); }
+export function clearAuth() {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+  localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
+}
 
 export async function login(registration: string, password: string) {
   const response = await api.post<AuthResponse>('/auth/login', { registration, password });
