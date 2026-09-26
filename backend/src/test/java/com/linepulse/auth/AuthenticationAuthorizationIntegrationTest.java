@@ -1,6 +1,7 @@
 package com.linepulse.auth;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -47,6 +48,7 @@ class AuthenticationAuthorizationIntegrationTest {
         userRepository.deleteAll();
         createUser("Operador Teste", "operator@test.local", UserRole.OPERATOR);
         createUser("Técnico Teste", "technician@test.local", UserRole.TECHNICIAN);
+        createUser("Administrador Teste", "admin@test.local", UserRole.ADMIN);
     }
 
     @Test
@@ -77,6 +79,33 @@ class AuthenticationAuthorizationIntegrationTest {
         mockMvc.perform(get("/api/audit-events")
                         .header("Authorization", "Bearer " + technicianToken))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldRestrictAdministrationToAdmins() throws Exception {
+        String operatorToken = login("operator@test.local", "TestPass123!");
+        String technicianToken = login("technician@test.local", "TestPass123!");
+        String adminToken = login("admin@test.local", "TestPass123!");
+
+        mockMvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + operatorToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + technicianToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldAllowAdminToPromoteARegularUser() throws Exception {
+        String adminToken = login("admin@test.local", "TestPass123!");
+        UserAccount operator = userRepository.findByEmailIgnoreCase("operator@test.local").orElseThrow();
+
+        mockMvc.perform(patch("/api/admin/users/{userId}/role", operator.getId())
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"TECHNICIAN\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("TECHNICIAN"));
     }
 
     @Test
