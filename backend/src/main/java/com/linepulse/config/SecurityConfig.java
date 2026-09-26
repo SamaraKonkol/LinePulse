@@ -28,11 +28,13 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/health", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/audit-events").hasAnyRole("TECHNICIAN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/incidents").hasAnyRole("OPERATOR", "TECHNICIAN", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/incidents/**").hasAnyRole("TECHNICIAN", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/machines").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/machines/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/machines/*/status").hasAnyRole("TECHNICIAN", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/work-orders", "/api/work-orders/**", "/api/downtimes", "/api/downtimes/**").hasAnyRole("TECHNICIAN", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/work-orders/**", "/api/downtimes/**").hasAnyRole("TECHNICIAN", "ADMIN")
