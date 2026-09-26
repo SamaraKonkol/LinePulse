@@ -26,7 +26,7 @@ function AuditPanel({ events, loading }: Props) {
             <span className="audit-dot" />
             <div>
               <strong>{event.description}</strong>
-              <small>{event.actorEmail} · {new Date(event.createdAt).toLocaleString('pt-BR')}</small>
+              <small>{event.actorRegistration} · {new Date(event.createdAt).toLocaleString('pt-BR')}</small>
             </div>
           </article>
         ))}
