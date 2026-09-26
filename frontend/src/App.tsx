@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, AlertTriangle, Factory, LogOut, Timer, Wrench } from 'lucide-react';
+import { Activity, AlertTriangle, Factory, LogOut, Repeat2, Timer, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import AlertPanel from './AlertPanel';
 import AuditPanel from './AuditPanel';
@@ -25,8 +25,9 @@ const priorityMeta: Record<IncidentPriority | WorkOrderPriority, { label: string
 const roleLabel = { ADMIN: 'Administrador', TECHNICIAN: 'Técnico', OPERATOR: 'Operador' };
 const maintenanceTypeLabel = { CORRECTIVE: 'Corretiva', PREVENTIVE: 'Preventiva', INSPECTION: 'Inspeção' };
 
-function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => void }) {
+function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; onLogout: () => void; onSwitchAccount: () => void }) {
   const queryClient = useQueryClient();
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [showIncidentHistory, setShowIncidentHistory] = useState(false);
   const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
@@ -109,6 +110,12 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
     onSuccess: refreshDashboard,
   });
 
+  function leaveSession(action: () => void) {
+    setShowAccountMenu(false);
+    queryClient.clear();
+    action();
+  }
+
   const dashboard = dashboardQuery.data;
   const availability = dashboard?.availabilityPercentage ?? 0;
   const recentIncidents = (incidentsQuery.data ?? []).filter((incident) => incident.status === 'OPEN' || incident.status === 'IN_PROGRESS').slice(0, 4);
@@ -126,7 +133,34 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
   return (
     <main className="app-shell">
       <aside className="sidebar">
-        <div className="brand-mark">LP</div>
+        <div className="account-menu">
+          <button
+            type="button"
+            className="account-menu-trigger"
+            onClick={() => setShowAccountMenu((open) => !open)}
+            aria-expanded={showAccountMenu}
+            aria-haspopup="menu"
+            title="Conta"
+          >
+            <span className="brand-mark">LP</span>
+          </button>
+          {showAccountMenu && (
+            <div className="account-menu-popover" role="menu">
+              <div className="account-menu-user">
+                <strong>{auth.user.name}</strong>
+                <span>{roleLabel[auth.user.role]}</span>
+              </div>
+              <button type="button" role="menuitem" onClick={() => leaveSession(onSwitchAccount)}>
+                <Repeat2 size={16} />
+                Trocar conta
+              </button>
+              <button type="button" role="menuitem" className="account-menu-logout" onClick={() => leaveSession(onLogout)}>
+                <LogOut size={16} />
+                Sair
+              </button>
+            </div>
+          )}
+        </div>
         <nav>
           <a className="nav-item active" href="#dashboard">Dashboard</a>
           <a className="nav-item" href="#machines">Máquinas</a>
@@ -136,7 +170,6 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
         <div className="sidebar-user">
           <strong>{auth.user.name}</strong>
           <span>{roleLabel[auth.user.role]}</span>
-          <button type="button" onClick={onLogout}><LogOut size={15} /> Sair</button>
         </div>
       </aside>
 
@@ -237,8 +270,9 @@ function Dashboard({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
 function App() {
   const [auth, setAuth] = useState<AuthResponse | null>(() => getStoredAuth());
   function logout() { clearAuth(); setAuth(null); }
+  function switchAccount() { clearAuth(); setAuth(null); }
   if (!auth) return <LoginPage onAuthenticated={setAuth} />;
-  return <Dashboard auth={auth} onLogout={logout} />;
+  return <Dashboard auth={auth} onLogout={logout} onSwitchAccount={switchAccount} />;
 }
 
 export default App;
