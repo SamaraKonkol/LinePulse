@@ -5,6 +5,7 @@
 .admin-section-heading h2 { margin: 4px 0 6px; }
 .admin-section-heading p { margin: 0; color: #65706a; }
 .admin-section-heading > svg { color: #a55d2b; }
+.admin-inline-note { padding: 11px 13px; border: 1px solid #ead3bf; border-radius: 9px; background: #fff9f4; color: #80502e; font-size: 13px; }
 .admin-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 18px; }
 .admin-card { min-width: 0; }
 .admin-card .secondary-button { display: inline-flex; align-items: center; gap: 7px; }
