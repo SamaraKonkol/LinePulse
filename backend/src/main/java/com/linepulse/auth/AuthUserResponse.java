@@ -5,10 +5,10 @@ import java.util.UUID;
 public record AuthUserResponse(
         UUID id,
         String name,
-        String email,
+        String registration,
         UserRole role
 ) {
     static AuthUserResponse from(UserAccount user) {
-        return new AuthUserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole());
+        return new AuthUserResponse(user.getId(), user.getName(), user.getRegistration(), user.getRole());
     }
 }

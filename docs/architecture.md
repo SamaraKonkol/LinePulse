@@ -22,7 +22,7 @@ For the current scope, a modular monolith provides:
 ## Backend modules
 
 - `asset` — plants, sectors, production lines and machines;
-- `auth` — registration, login, roles, JWT generation and authentication;
+- `auth` — employee registrations, administrator-managed accounts, login, roles, JWT generation and authentication;
 - `incident` — operational incident registration and lifecycle;
 - `maintenance` — maintenance work orders and lifecycle transitions;
 - `downtime` — machine downtime intervals;
@@ -51,14 +51,15 @@ Controllers translate HTTP requests into application calls. Services contain bus
 
 ## Authentication flow
 
-1. A user registers or logs in through `/api/auth`.
+1. An administrator creates a user with a unique employee registration, password and role.
 2. Passwords are stored as BCrypt hashes.
-3. Successful authentication returns a signed JWT.
-4. The frontend stores the session locally and sends the token as `Authorization: Bearer <token>`.
-5. `JwtAuthenticationFilter` validates the token and reloads the user from PostgreSQL.
-6. Spring Security evaluates endpoint authorization using the current database role.
+3. The user logs in with registration and password through `/api/auth/login`.
+4. Successful authentication returns a signed JWT whose subject is the employee registration.
+5. The frontend stores the session locally and sends the token as `Authorization: Bearer <token>`.
+6. `JwtAuthenticationFilter` validates the token and reloads the user from PostgreSQL by registration.
+7. Spring Security evaluates endpoint authorization using the current database role.
 
-Reloading the user on each authenticated request means disabling a user or changing their role takes effect without waiting for an already-issued token to expire.
+Reloading the user on each authenticated request means disabling, deleting or changing the role of a user takes effect without waiting for an already-issued token to expire.
 
 ## Roles
 
@@ -73,7 +74,8 @@ Reloading the user on each authenticated request means disabling a user or chang
 | Register downtime |  | ✓ | ✓ |
 | Close downtime |  | ✓ | ✓ |
 | Change machine status |  | ✓ | ✓ |
-| Register machines |  |  | ✓ |
+| Register/edit machines |  |  | ✓ |
+| Create/manage/delete users |  |  | ✓ |
 | View audit trail |  | ✓ | ✓ |
 
 ## Operational indicators
@@ -112,10 +114,10 @@ Operational actions generate persistent audit records containing:
 - entity type;
 - entity identifier;
 - human-readable description;
-- authenticated user email;
+- authenticated employee registration;
 - timestamp.
 
-Audit records are stored in PostgreSQL and the most recent events are exposed only to technician and admin roles.
+Audit records are stored in PostgreSQL and the most recent events are exposed only to technician and admin roles. The actor registration remains in the audit record even if the user account is later deleted.
 
 ## Database evolution
 

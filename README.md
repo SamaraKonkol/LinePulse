@@ -63,15 +63,16 @@ Controller -> Service -> Repository -> PostgreSQL
 
 ## Roles
 
-- `ADMIN` — administrative access, machine registration and operational management
+- `ADMIN` — administrative access, machine registration, user management and operational management
 - `TECHNICIAN` — maintenance operations, incident handling and machine status management
 - `OPERATOR` — operational access and incident reporting
 
 ## Current features
 
-- User registration and login with BCrypt password hashing and JWT
+- Closed-access authentication using employee registration + BCrypt password + JWT
+- Administrator-only user creation, role management, activation/deactivation and deletion
 - Role-based API authorization
-- Machine listing and operational status updates
+- Machine listing, administrator-managed machine registration/editing and operational status updates
 - Incident creation and lifecycle: open, in progress, resolved and cancelled
 - Searchable incident history with status and priority filters
 - Maintenance work order creation, start and completion lifecycle
@@ -81,12 +82,12 @@ Controller -> Service -> Repository -> PostgreSQL
 - MTTR calculation using completed maintenance orders from the last 30 days
 - Seven-day incident trend chart backed by API data
 - Operational alerts for critical incidents, prolonged downtime and critical work orders
-- Persistent audit trail with authenticated actor and timestamp
+- Persistent audit trail with authenticated employee registration and timestamp
 - Recent operational activity feed for technician and admin roles
 - PostgreSQL schema managed with Flyway migrations
 - OpenAPI documentation with Bearer JWT authentication
 - Unit tests for maintenance, incident lifecycle, alerts and dashboard indicators
-- PostgreSQL integration tests covering registration, real JWT authorization and user-backed token validation
+- PostgreSQL integration tests covering registration-based JWT authorization and administrator-only user management
 - Responsive React interface
 - CI pipeline validating backend tests, frontend build and Docker Compose build
 - Full local stack with Docker Compose
@@ -137,11 +138,11 @@ PostgreSQL: localhost:5432
 
 Docker Compose enables local demo users automatically:
 
-| Role | Email | Password |
+| Role | Registration | Password |
 | --- | --- | --- |
-| Admin | `admin@linepulse.local` | `LinePulse123!` |
-| Technician | `technician@linepulse.local` | `LinePulse123!` |
-| Operator | `operator@linepulse.local` | `LinePulse123!` |
+| Admin | `ADM001` | `LinePulse123!` |
+| Technician | `TEC001` | `LinePulse123!` |
+| Operator | `OPE001` | `LinePulse123!` |
 
 Demo user creation is disabled by default outside the Docker development configuration. Do not enable demo users with public credentials in a production environment.
 
@@ -201,7 +202,7 @@ The OpenAPI specification is available at:
 http://localhost:8080/v3/api-docs
 ```
 
-Authenticate through `/api/auth/login`, copy the returned token and use the Swagger `Authorize` control for protected endpoints.
+Authenticate through `/api/auth/login` using employee registration and password, copy the returned token and use the Swagger `Authorize` control for protected endpoints.
 
 ## Environment variables
 
@@ -234,9 +235,9 @@ The Docker Compose configuration uses local development defaults and supports ov
 ## Roadmap
 
 - Additional domain integration tests
-- External notification delivery rules (email/webhook)
+- External notification delivery rules (webhook)
 - AI-assisted incident classification
-- Production deployment
+- Production deployment hardening
 
 ## Status
 

@@ -23,29 +23,29 @@ class DemoUserInitializerTest {
 
     @Test
     void shouldSynchronizeExistingDemoUsersWithTheirIntendedRoles() throws Exception {
-        UserAccount admin = existingUser("Administrador Antigo", "admin@linepulse.local", UserRole.OPERATOR);
-        UserAccount technician = existingUser("Técnico Antigo", "technician@linepulse.local", UserRole.OPERATOR);
-        UserAccount operator = existingUser("Operador Antigo", "operator@linepulse.local", UserRole.ADMIN);
+        UserAccount admin = existingUser("Administrador Antigo", "ADM001", UserRole.OPERATOR);
+        UserAccount technician = existingUser("Técnico Antigo", "TEC001", UserRole.OPERATOR);
+        UserAccount operator = existingUser("Operador Antigo", "OPE001", UserRole.ADMIN);
 
         when(passwordEncoder.encode("DemoPass123!")).thenReturn("encoded-demo-password");
-        when(userRepository.findByEmailIgnoreCase("admin@linepulse.local")).thenReturn(Optional.of(admin));
-        when(userRepository.findByEmailIgnoreCase("technician@linepulse.local")).thenReturn(Optional.of(technician));
-        when(userRepository.findByEmailIgnoreCase("operator@linepulse.local")).thenReturn(Optional.of(operator));
+        when(userRepository.findByRegistrationIgnoreCase("ADM001")).thenReturn(Optional.of(admin));
+        when(userRepository.findByRegistrationIgnoreCase("TEC001")).thenReturn(Optional.of(technician));
+        when(userRepository.findByRegistrationIgnoreCase("OPE001")).thenReturn(Optional.of(operator));
 
         DemoUserInitializer initializer = new DemoUserInitializer(userRepository, passwordEncoder, "DemoPass123!");
         initializer.run(null);
 
-        assertDemoUser(admin, "Administrador Demo", UserRole.ADMIN);
-        assertDemoUser(technician, "Técnico Demo", UserRole.TECHNICIAN);
-        assertDemoUser(operator, "Operador Demo", UserRole.OPERATOR);
+        assertDemoUser(admin, "Administrador Demo", "ADM001", UserRole.ADMIN);
+        assertDemoUser(technician, "Técnico Demo", "TEC001", UserRole.TECHNICIAN);
+        assertDemoUser(operator, "Operador Demo", "OPE001", UserRole.OPERATOR);
     }
 
-    private UserAccount existingUser(String name, String email, UserRole role) {
+    private UserAccount existingUser(String name, String registration, UserRole role) {
         Instant now = Instant.now().minusSeconds(3600);
         return new UserAccount(
                 UUID.randomUUID(),
                 name,
-                email,
+                registration,
                 "old-password",
                 role,
                 false,
@@ -54,8 +54,9 @@ class DemoUserInitializerTest {
         );
     }
 
-    private void assertDemoUser(UserAccount user, String expectedName, UserRole expectedRole) {
+    private void assertDemoUser(UserAccount user, String expectedName, String expectedRegistration, UserRole expectedRole) {
         assertEquals(expectedName, user.getName());
+        assertEquals(expectedRegistration, user.getRegistration());
         assertEquals(expectedRole, user.getRole());
         assertEquals("encoded-demo-password", user.getPasswordHash());
         assertTrue(user.isActive());

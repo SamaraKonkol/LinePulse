@@ -15,19 +15,19 @@ public class AuditEvent {
     private String entityType;
     private UUID entityId;
     private String description;
-    private String actorEmail;
+    private String actorRegistration;
     private Instant createdAt;
 
     protected AuditEvent() {
     }
 
-    public AuditEvent(UUID id, String action, String entityType, UUID entityId, String description, String actorEmail, Instant createdAt) {
+    public AuditEvent(UUID id, String action, String entityType, UUID entityId, String description, String actorRegistration, Instant createdAt) {
         this.id = id;
         this.action = action;
         this.entityType = entityType;
         this.entityId = entityId;
         this.description = description;
-        this.actorEmail = actorEmail;
+        this.actorRegistration = actorRegistration;
         this.createdAt = createdAt;
     }
 
@@ -36,6 +36,6 @@ public class AuditEvent {
     public String getEntityType() { return entityType; }
     public UUID getEntityId() { return entityId; }
     public String getDescription() { return description; }
-    public String getActorEmail() { return actorEmail; }
+    public String getActorRegistration() { return actorRegistration; }
     public Instant getCreatedAt() { return createdAt; }
 }

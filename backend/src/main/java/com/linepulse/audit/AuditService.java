@@ -19,16 +19,16 @@ public class AuditService {
     @Transactional
     public void record(String action, String entityType, UUID entityId, String description) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String actorEmail = authentication != null && authentication.isAuthenticated()
+        String actorRegistration = authentication != null && authentication.isAuthenticated()
                 ? authentication.getName()
-                : "system";
+                : "SYSTEM";
         AuditEvent event = new AuditEvent(
                 UUID.randomUUID(),
                 action,
                 entityType,
                 entityId,
                 description,
-                actorEmail,
+                actorRegistration,
                 Instant.now()
         );
         auditEventRepository.save(event);

@@ -8,13 +8,13 @@ type Props = {
 };
 
 const demoAccounts = [
-  { label: 'Administrador', email: 'admin@linepulse.local' },
-  { label: 'Técnico', email: 'technician@linepulse.local' },
-  { label: 'Operador', email: 'operator@linepulse.local' },
+  { label: 'Administrador', registration: 'ADM001' },
+  { label: 'Técnico', registration: 'TEC001' },
+  { label: 'Operador', registration: 'OPE001' },
 ];
 
 function LoginPage({ onAuthenticated }: Props) {
-  const [email, setEmail] = useState('');
+  const [registration, setRegistration] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,11 +25,11 @@ function LoginPage({ onAuthenticated }: Props) {
     setLoading(true);
 
     try {
-      const auth = await login(email, password);
+      const auth = await login(registration, password);
       storeAuth(auth);
       onAuthenticated(auth);
     } catch {
-      setError('Não foi possível entrar. Confira e-mail e senha.');
+      setError('Não foi possível entrar. Confira cadastro e senha.');
     } finally {
       setLoading(false);
     }
@@ -52,13 +52,13 @@ function LoginPage({ onAuthenticated }: Props) {
         <div className="auth-card">
           <span className="eyebrow">Acesso ao sistema</span>
           <h2>Entrar no LinePulse</h2>
-          <p>Use as credenciais fornecidas pelo administrador da operação.</p>
+          <p>Use o cadastro e a senha fornecidos pelo administrador da operação.</p>
 
           <div className="demo-access">
             <span>Perfis demo</span>
             <div className="demo-access-actions">
               {demoAccounts.map((account) => (
-                <button type="button" key={account.email} onClick={() => setEmail(account.email)}>
+                <button type="button" key={account.registration} onClick={() => setRegistration(account.registration)}>
                   {account.label}
                 </button>
               ))}
@@ -67,12 +67,12 @@ function LoginPage({ onAuthenticated }: Props) {
 
           <form onSubmit={handleSubmit}>
             <label>
-              E-mail
-              <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+              Cadastro
+              <input value={registration} onChange={(event) => setRegistration(event.target.value.toUpperCase())} required maxLength={40} autoComplete="username" />
             </label>
             <label>
               Senha
-              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} />
+              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="current-password" />
             </label>
 
             {error && <div className="auth-error">{error}</div>}

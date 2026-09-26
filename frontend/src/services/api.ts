@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { AdminUser, AuditEvent, AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateMachineInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, IncidentTrendPoint, Machine, MachineStatus, OperationalAlert, ProductionLine, UpdateMachineInput, UserRole, WorkOrder } from '../types/api';
 
-const AUTH_STORAGE_KEY = 'linepulse-auth';
+const AUTH_STORAGE_KEY = 'linepulse-auth-v2';
+const LEGACY_AUTH_STORAGE_KEY = 'linepulse-auth';
 const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:8080/api';
 
 const api = axios.create({
@@ -18,6 +19,7 @@ api.interceptors.request.use((config) => {
 });
 
 export function getStoredAuth(): AuthResponse | null {
+  localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
   const raw = localStorage.getItem(AUTH_STORAGE_KEY);
   if (!raw) return null;
 
@@ -30,10 +32,13 @@ export function getStoredAuth(): AuthResponse | null {
 }
 
 export function storeAuth(auth: AuthResponse) { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth)); }
-export function clearAuth() { localStorage.removeItem(AUTH_STORAGE_KEY); }
+export function clearAuth() {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+  localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
+}
 
-export async function login(email: string, password: string) {
-  const response = await api.post<AuthResponse>('/auth/login', { email, password });
+export async function login(registration: string, password: string) {
+  const response = await api.post<AuthResponse>('/auth/login', { registration, password });
   return response.data;
 }
 
@@ -87,7 +92,7 @@ export async function getAdminUsers() {
   return response.data;
 }
 
-export async function createAdminUser(input: { name: string; email: string; password: string; role: UserRole }) {
+export async function createAdminUser(input: { name: string; registration: string; password: string; role: UserRole }) {
   const response = await api.post<AdminUser>('/admin/users', input);
   return response.data;
 }
@@ -100,6 +105,10 @@ export async function updateAdminUserRole(userId: string, role: UserRole) {
 export async function updateAdminUserStatus(userId: string, active: boolean) {
   const response = await api.patch<AdminUser>(`/admin/users/${userId}/status`, { active });
   return response.data;
+}
+
+export async function deleteAdminUser(userId: string) {
+  await api.delete(`/admin/users/${userId}`);
 }
 
 export async function getProductionLines() {
