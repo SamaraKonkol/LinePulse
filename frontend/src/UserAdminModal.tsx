@@ -4,7 +4,7 @@ import './incident-modal.css';
 
 type UserDraft = {
   name: string;
-  email: string;
+  registration: string;
   password: string;
   role: UserRole;
 };
@@ -17,13 +17,13 @@ type Props = {
 
 function UserAdminModal({ loading, onClose, onSubmit }: Props) {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [registration, setRegistration] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('OPERATOR');
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    onSubmit({ name, email, password, role });
+    onSubmit({ name, registration: registration.trim().toUpperCase(), password, role });
   }
 
   return (
@@ -44,12 +44,12 @@ function UserAdminModal({ loading, onClose, onSubmit }: Props) {
           </label>
 
           <label>
-            E-mail
-            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required maxLength={180} />
+            Cadastro
+            <input value={registration} onChange={(event) => setRegistration(event.target.value.toUpperCase())} required maxLength={40} placeholder="Ex.: 12345" />
           </label>
 
           <label>
-            Senha inicial
+            Senha
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} maxLength={72} />
           </label>
 
