@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, ShieldCheck, UserRoundCog } from 'lucide-react';
+import { Pencil, Plus, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import MachineAdminModal, { type MachineDraft } from './MachineAdminModal';
 import UserAdminModal from './UserAdminModal';
