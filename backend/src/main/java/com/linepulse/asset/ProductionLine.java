@@ -38,4 +38,8 @@ public class ProductionLine {
     public String getCode() {
         return code;
     }
+
+    public boolean isActive() {
+        return active;
+    }
 }
