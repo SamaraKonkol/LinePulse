@@ -30,25 +30,30 @@ public class DemoUserInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        createIfMissing("Administrador Demo", "admin@linepulse.local", UserRole.ADMIN);
-        createIfMissing("Técnico Demo", "technician@linepulse.local", UserRole.TECHNICIAN);
-        createIfMissing("Operador Demo", "operator@linepulse.local", UserRole.OPERATOR);
+        synchronizeDemoUser("Administrador Demo", "admin@linepulse.local", UserRole.ADMIN);
+        synchronizeDemoUser("Técnico Demo", "technician@linepulse.local", UserRole.TECHNICIAN);
+        synchronizeDemoUser("Operador Demo", "operator@linepulse.local", UserRole.OPERATOR);
     }
 
-    private void createIfMissing(String name, String email, UserRole role) {
-        if (userRepository.existsByEmailIgnoreCase(email)) {
-            return;
-        }
+    private void synchronizeDemoUser(String name, String email, UserRole role) {
         Instant now = Instant.now();
-        userRepository.save(new UserAccount(
-                UUID.randomUUID(),
-                name,
-                email,
-                passwordEncoder.encode(demoPassword),
-                role,
-                true,
-                now,
-                now
-        ));
+        String passwordHash = passwordEncoder.encode(demoPassword);
+
+        userRepository.findByEmailIgnoreCase(email).ifPresentOrElse(
+                existing -> {
+                    existing.synchronizeDemoProfile(name, passwordHash, role, now);
+                    userRepository.save(existing);
+                },
+                () -> userRepository.save(new UserAccount(
+                        UUID.randomUUID(),
+                        name,
+                        email,
+                        passwordHash,
+                        role,
+                        true,
+                        now,
+                        now
+                ))
+        );
     }
 }
