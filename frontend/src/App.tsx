@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Activity, AlertTriangle, Factory, LogOut, Repeat2, Timer, Wrench } from 'lucide-react';
 import { useState } from 'react';
+import AdminPanel from './AdminPanel';
 import AlertPanel from './AlertPanel';
 import AuditPanel from './AuditPanel';
 import DowntimeModal from './DowntimeModal';
@@ -33,7 +34,8 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
   const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
   const [showMaintenanceHistory, setShowMaintenanceHistory] = useState(false);
   const [showDowntimeModal, setShowDowntimeModal] = useState(false);
-  const canManageOperations = auth.user.role === 'ADMIN' || auth.user.role === 'TECHNICIAN';
+  const isAdmin = auth.user.role === 'ADMIN';
+  const canManageOperations = isAdmin || auth.user.role === 'TECHNICIAN';
   const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: getDashboardMetrics });
   const trendQuery = useQuery({ queryKey: ['incident-trend'], queryFn: getIncidentTrend });
   const alertsQuery = useQuery({ queryKey: ['alerts'], queryFn: getAlerts, refetchInterval: 30_000 });
@@ -166,6 +168,7 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
           <a className="nav-item" href="#machines">Máquinas</a>
           <a className="nav-item" href="#incidents">Ocorrências</a>
           <a className="nav-item" href="#maintenance">Manutenção</a>
+          {isAdmin && <a className="nav-item admin-nav-item" href="#admin">Administração</a>}
         </nav>
         <div className="sidebar-user">
           <strong>{auth.user.name}</strong>
@@ -258,6 +261,7 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
 
         {showMaintenanceHistory && <MaintenanceHistoryPanel orders={workOrdersQuery.data ?? []} onClose={() => setShowMaintenanceHistory(false)} />}
         {canManageOperations && <AuditPanel events={auditQuery.data ?? []} loading={auditQuery.isLoading} />}
+        {isAdmin && <AdminPanel currentUserId={auth.user.id} machines={machinesQuery.data ?? []} />}
       </section>
 
       {showIncidentModal && <IncidentModal machines={machinesQuery.data ?? []} loading={createIncidentMutation.isPending} onClose={() => setShowIncidentModal(false)} onSubmit={(draft) => createIncidentMutation.mutate(draft)} />}
