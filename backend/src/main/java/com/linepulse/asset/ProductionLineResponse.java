@@ -4,11 +4,26 @@ import java.util.UUID;
 
 public record ProductionLineResponse(
         UUID id,
+        UUID sectorId,
+        String sector,
+        UUID plantId,
+        String plant,
         String name,
         String code,
         boolean active
 ) {
     static ProductionLineResponse from(ProductionLine line) {
-        return new ProductionLineResponse(line.getId(), line.getName(), line.getCode(), line.isActive());
+        Sector sector = line.getSector();
+        Plant plant = sector.getPlant();
+        return new ProductionLineResponse(
+                line.getId(),
+                sector.getId(),
+                sector.getName(),
+                plant.getId(),
+                plant.getName(),
+                line.getName(),
+                line.getCode(),
+                line.isActive()
+        );
     }
 }
