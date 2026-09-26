@@ -3,19 +3,24 @@ package com.linepulse.auth;
 import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AdminUserService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
 
-    public AdminUserService(UserRepository userRepository, AuditService auditService) {
+    public AdminUserService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuditService auditService) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
         this.auditService = auditService;
     }
 
@@ -25,6 +30,28 @@ public class AdminUserService {
                 .sorted(Comparator.comparing(UserAccount::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(AdminUserResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public AdminUserResponse create(AdminCreateUserRequest request) {
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            throw new ConflictException("Email is already registered");
+        }
+
+        Instant now = Instant.now();
+        UserAccount saved = userRepository.save(new UserAccount(
+                UUID.randomUUID(),
+                request.name().trim(),
+                email,
+                passwordEncoder.encode(request.password()),
+                request.role(),
+                true,
+                now,
+                now
+        ));
+        auditService.record("USER_CREATED", "USER", saved.getId(), "Usuário " + saved.getEmail() + " criado como " + saved.getRole());
+        return AdminUserResponse.from(saved);
     }
 
     @Transactional

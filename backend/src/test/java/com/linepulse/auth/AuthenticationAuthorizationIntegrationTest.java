@@ -52,7 +52,7 @@ class AuthenticationAuthorizationIntegrationTest {
     }
 
     @Test
-    void shouldCreateNewRegistrationsAsOperator() throws Exception {
+    void shouldBlockPublicRegistration() throws Exception {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -62,9 +62,43 @@ class AuthenticationAuthorizationIntegrationTest {
                                   "password": "StrongPass123!"
                                 }
                                 """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldAllowOnlyAdminToCreateUsers() throws Exception {
+        String operatorToken = login("operator@test.local", "TestPass123!");
+        String technicianToken = login("technician@test.local", "TestPass123!");
+        String adminToken = login("admin@test.local", "TestPass123!");
+        String body = """
+                {
+                  "name": "Novo Técnico",
+                  "email": "new.technician@test.local",
+                  "password": "StrongPass123!",
+                  "role": "TECHNICIAN"
+                }
+                """;
+
+        mockMvc.perform(post("/api/admin/users")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/admin/users")
+                        .header("Authorization", "Bearer " + technicianToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/admin/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.token").isNotEmpty())
-                .andExpect(jsonPath("$.user.role").value("OPERATOR"));
+                .andExpect(jsonPath("$.email").value("new.technician@test.local"))
+                .andExpect(jsonPath("$.role").value("TECHNICIAN"))
+                .andExpect(jsonPath("$.active").value(true));
     }
 
     @Test

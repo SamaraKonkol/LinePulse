@@ -37,11 +37,6 @@ export async function login(email: string, password: string) {
   return response.data;
 }
 
-export async function register(name: string, email: string, password: string) {
-  const response = await api.post<AuthResponse>('/auth/register', { name, email, password });
-  return response.data;
-}
-
 export async function getDashboardMetrics() {
   const response = await api.get<DashboardMetrics>('/dashboard');
   return response.data;
@@ -89,6 +84,11 @@ export async function updateMachineStatus(machineId: string, status: MachineStat
 
 export async function getAdminUsers() {
   const response = await api.get<AdminUser[]>('/admin/users');
+  return response.data;
+}
+
+export async function createAdminUser(input: { name: string; email: string; password: string; role: UserRole }) {
+  const response = await api.post<AdminUser>('/admin/users', input);
   return response.data;
 }
 

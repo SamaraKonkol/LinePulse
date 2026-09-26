@@ -1,45 +1,20 @@
 package com.linepulse.auth;
 
-import com.linepulse.common.ConflictException;
 import com.linepulse.common.UnauthorizedException;
-import java.time.Instant;
 import java.util.Locale;
-import java.util.UUID;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UserRepository userRepository, org.springframework.security.crypto.password.PasswordEncoder passwordEncoder, JwtService jwtService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
-    }
-
-    @Transactional
-    public AuthResponse register(RegisterRequest request) {
-        String email = normalizeEmail(request.email());
-        if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new ConflictException("Email is already registered");
-        }
-        Instant now = Instant.now();
-        UserAccount user = new UserAccount(
-                UUID.randomUUID(),
-                request.name().trim(),
-                email,
-                passwordEncoder.encode(request.password()),
-                UserRole.OPERATOR,
-                true,
-                now,
-                now
-        );
-        UserAccount saved = userRepository.save(user);
-        return new AuthResponse(jwtService.generate(saved), AuthUserResponse.from(saved));
     }
 
     @Transactional(readOnly = true)

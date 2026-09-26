@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, ShieldCheck, UserRoundCog } from 'lucide-react';
+import { Pencil, Plus, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import MachineAdminModal, { type MachineDraft } from './MachineAdminModal';
-import { createMachine, getAdminUsers, getProductionLines, updateAdminUserRole, updateAdminUserStatus, updateMachine } from './services/api';
+import UserAdminModal from './UserAdminModal';
+import { createAdminUser, createMachine, getAdminUsers, getProductionLines, updateAdminUserRole, updateAdminUserStatus, updateMachine } from './services/api';
 import type { Machine, ProductionLine, UserRole } from './types/api';
 import './admin.css';
 
@@ -20,6 +21,7 @@ const roleLabel: Record<UserRole, string> = {
 function AdminPanel({ currentUserId, machines }: Props) {
   const queryClient = useQueryClient();
   const [machineModalOpen, setMachineModalOpen] = useState(false);
+  const [userModalOpen, setUserModalOpen] = useState(false);
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
   const usersQuery = useQuery({ queryKey: ['admin-users'], queryFn: getAdminUsers });
   const linesQuery = useQuery({ queryKey: ['admin-production-lines'], queryFn: getProductionLines });
@@ -50,6 +52,14 @@ function AdminPanel({ currentUserId, machines }: Props) {
     queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
     queryClient.invalidateQueries({ queryKey: ['audit-events'] }),
   ]);
+
+  const createUserMutation = useMutation({
+    mutationFn: createAdminUser,
+    onSuccess: async () => {
+      setUserModalOpen(false);
+      await refreshAdmin();
+    },
+  });
 
   const roleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: UserRole }) => updateAdminUserRole(userId, role),
@@ -96,7 +106,7 @@ function AdminPanel({ currentUserId, machines }: Props) {
     createMachineMutation.mutate(draft);
   }
 
-  const mutationError = roleMutation.isError || statusMutation.isError || createMachineMutation.isError || editMachineMutation.isError;
+  const mutationError = createUserMutation.isError || roleMutation.isError || statusMutation.isError || createMachineMutation.isError || editMachineMutation.isError;
   const savingMachine = createMachineMutation.isPending || editMachineMutation.isPending;
 
   return (
@@ -148,7 +158,9 @@ function AdminPanel({ currentUserId, machines }: Props) {
               <span className="eyebrow">Controle de acesso</span>
               <h3>Usuários e perfis</h3>
             </div>
-            <UserRoundCog size={22} />
+            <button className="secondary-button" type="button" onClick={() => setUserModalOpen(true)}>
+              <Plus size={16} /> Novo usuário
+            </button>
           </div>
 
           {usersQuery.isLoading && <div className="empty-state">Carregando usuários...</div>}
@@ -194,6 +206,14 @@ function AdminPanel({ currentUserId, machines }: Props) {
           loading={savingMachine}
           onClose={() => { setMachineModalOpen(false); setEditingMachine(null); }}
           onSubmit={submitMachine}
+        />
+      )}
+
+      {userModalOpen && (
+        <UserAdminModal
+          loading={createUserMutation.isPending}
+          onClose={() => setUserModalOpen(false)}
+          onSubmit={(draft) => createUserMutation.mutate(draft)}
         />
       )}
     </section>
