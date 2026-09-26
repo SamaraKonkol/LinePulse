@@ -13,7 +13,7 @@ function DowntimePanel({ downtimes, canManage, closing, onNew, onCloseDowntime }
   const openDowntimes = downtimes.filter((downtime) => downtime.endedAt === null);
 
   return (
-    <section className="panel downtime-panel">
+    <section className="panel downtime-panel" id="downtime">
       <div className="panel-heading">
         <div>
           <span className="eyebrow">Paradas</span>
@@ -33,9 +33,7 @@ function DowntimePanel({ downtimes, canManage, closing, onNew, onCloseDowntime }
               <span>{downtime.reason}</span>
               <small>Desde {new Date(downtime.startedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</small>
             </div>
-            {canManage && (
-              <button className="order-action complete" disabled={closing} onClick={() => onCloseDowntime(downtime.id)}>Encerrar parada</button>
-            )}
+            {canManage && <button className="order-action complete" disabled={closing} onClick={() => onCloseDowntime(downtime.id)}>Encerrar parada</button>}
           </article>
         ))}
       </div>
