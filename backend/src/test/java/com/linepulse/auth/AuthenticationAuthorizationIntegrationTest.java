@@ -1,5 +1,6 @@
 package com.linepulse.auth;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -46,9 +47,9 @@ class AuthenticationAuthorizationIntegrationTest {
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
-        createUser("Operador Teste", "operator@test.local", UserRole.OPERATOR);
-        createUser("Técnico Teste", "technician@test.local", UserRole.TECHNICIAN);
-        createUser("Administrador Teste", "admin@test.local", UserRole.ADMIN);
+        createUser("Operador Teste", "OP1001", UserRole.OPERATOR);
+        createUser("Técnico Teste", "TEC1001", UserRole.TECHNICIAN);
+        createUser("Administrador Teste", "ADM1001", UserRole.ADMIN);
     }
 
     @Test
@@ -58,7 +59,7 @@ class AuthenticationAuthorizationIntegrationTest {
                         .content("""
                                 {
                                   "name": "Nova Pessoa",
-                                  "email": "new.user@test.local",
+                                  "registration": "OP2001",
                                   "password": "StrongPass123!"
                                 }
                                 """))
@@ -67,13 +68,13 @@ class AuthenticationAuthorizationIntegrationTest {
 
     @Test
     void shouldAllowOnlyAdminToCreateUsers() throws Exception {
-        String operatorToken = login("operator@test.local", "TestPass123!");
-        String technicianToken = login("technician@test.local", "TestPass123!");
-        String adminToken = login("admin@test.local", "TestPass123!");
+        String operatorToken = login("OP1001", "TestPass123!");
+        String technicianToken = login("TEC1001", "TestPass123!");
+        String adminToken = login("ADM1001", "TestPass123!");
         String body = """
                 {
                   "name": "Novo Técnico",
-                  "email": "new.technician@test.local",
+                  "registration": "TEC2001",
                   "password": "StrongPass123!",
                   "role": "TECHNICIAN"
                 }
@@ -96,15 +97,15 @@ class AuthenticationAuthorizationIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.email").value("new.technician@test.local"))
+                .andExpect(jsonPath("$.registration").value("TEC2001"))
                 .andExpect(jsonPath("$.role").value("TECHNICIAN"))
                 .andExpect(jsonPath("$.active").value(true));
     }
 
     @Test
     void shouldEnforceAuditAuthorizationUsingRealJwt() throws Exception {
-        String operatorToken = login("operator@test.local", "TestPass123!");
-        String technicianToken = login("technician@test.local", "TestPass123!");
+        String operatorToken = login("OP1001", "TestPass123!");
+        String technicianToken = login("TEC1001", "TestPass123!");
 
         mockMvc.perform(get("/api/audit-events")
                         .header("Authorization", "Bearer " + operatorToken))
@@ -117,9 +118,9 @@ class AuthenticationAuthorizationIntegrationTest {
 
     @Test
     void shouldRestrictAdministrationToAdmins() throws Exception {
-        String operatorToken = login("operator@test.local", "TestPass123!");
-        String technicianToken = login("technician@test.local", "TestPass123!");
-        String adminToken = login("admin@test.local", "TestPass123!");
+        String operatorToken = login("OP1001", "TestPass123!");
+        String technicianToken = login("TEC1001", "TestPass123!");
+        String adminToken = login("ADM1001", "TestPass123!");
 
         mockMvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + operatorToken))
                 .andExpect(status().isForbidden());
@@ -131,8 +132,8 @@ class AuthenticationAuthorizationIntegrationTest {
 
     @Test
     void shouldAllowAdminToPromoteARegularUser() throws Exception {
-        String adminToken = login("admin@test.local", "TestPass123!");
-        UserAccount operator = userRepository.findByEmailIgnoreCase("operator@test.local").orElseThrow();
+        String adminToken = login("ADM1001", "TestPass123!");
+        UserAccount operator = userRepository.findByRegistrationIgnoreCase("OP1001").orElseThrow();
 
         mockMvc.perform(patch("/api/admin/users/{userId}/role", operator.getId())
                         .header("Authorization", "Bearer " + adminToken)
@@ -143,20 +144,24 @@ class AuthenticationAuthorizationIntegrationTest {
     }
 
     @Test
-    void shouldRejectTokenAfterUserIsRemoved() throws Exception {
-        String token = login("operator@test.local", "TestPass123!");
-        UserAccount operator = userRepository.findByEmailIgnoreCase("operator@test.local").orElseThrow();
-        userRepository.delete(operator);
+    void shouldAllowAdminToDeleteARegularUserAndInvalidateTheirToken() throws Exception {
+        String operatorToken = login("OP1001", "TestPass123!");
+        String adminToken = login("ADM1001", "TestPass123!");
+        UserAccount operator = userRepository.findByRegistrationIgnoreCase("OP1001").orElseThrow();
+
+        mockMvc.perform(delete("/api/admin/users/{userId}", operator.getId())
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/dashboard")
-                        .header("Authorization", "Bearer " + token))
+                        .header("Authorization", "Bearer " + operatorToken))
                 .andExpect(status().isForbidden());
     }
 
-    private String login(String email, String password) throws Exception {
+    private String login(String registration, String password) throws Exception {
         String response = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new LoginRequest(email, password))))
+                        .content(objectMapper.writeValueAsString(new LoginRequest(registration, password))))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -166,12 +171,12 @@ class AuthenticationAuthorizationIntegrationTest {
         return payload.get("token").asText();
     }
 
-    private void createUser(String name, String email, UserRole role) {
+    private void createUser(String name, String registration, UserRole role) {
         Instant now = Instant.now();
         userRepository.save(new UserAccount(
                 UUID.randomUUID(),
                 name,
-                email,
+                registration,
                 passwordEncoder.encode("TestPass123!"),
                 role,
                 true,
