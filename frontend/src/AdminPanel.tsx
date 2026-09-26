@@ -63,8 +63,18 @@ function AdminPanel({ currentUserId, machines }: Props) {
 
   function submitMachine(draft: MachineDraft) {
     if (editingMachine) {
-      const { status: _status, ...details } = draft;
-      editMachineMutation.mutate({ machineId: editingMachine.id, draft: details });
+      editMachineMutation.mutate({
+        machineId: editingMachine.id,
+        draft: {
+          productionLineId: draft.productionLineId,
+          name: draft.name,
+          assetCode: draft.assetCode,
+          manufacturer: draft.manufacturer,
+          model: draft.model,
+          serialNumber: draft.serialNumber,
+          installedAt: draft.installedAt,
+        },
+      });
       return;
     }
     createMachineMutation.mutate(draft);
