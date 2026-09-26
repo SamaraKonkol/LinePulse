@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuditEvent, AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, IncidentTrendPoint, Machine, MachineStatus, OperationalAlert, WorkOrder } from '../types/api';
+import type { AdminUser, AuditEvent, AuthResponse, CreateDowntimeInput, CreateIncidentInput, CreateMachineInput, CreateWorkOrderInput, DashboardMetrics, Downtime, Incident, IncidentTrendPoint, Machine, MachineStatus, OperationalAlert, ProductionLine, UpdateMachineInput, UserRole, WorkOrder } from '../types/api';
 
 const AUTH_STORAGE_KEY = 'linepulse-auth';
 const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:8080/api';
@@ -72,8 +72,38 @@ export async function getMachines() {
   return response.data;
 }
 
+export async function createMachine(input: CreateMachineInput) {
+  const response = await api.post<Machine>('/machines', input);
+  return response.data;
+}
+
+export async function updateMachine(machineId: string, input: UpdateMachineInput) {
+  const response = await api.patch<Machine>(`/machines/${machineId}`, input);
+  return response.data;
+}
+
 export async function updateMachineStatus(machineId: string, status: MachineStatus) {
   const response = await api.patch<Machine>(`/machines/${machineId}/status`, { status });
+  return response.data;
+}
+
+export async function getAdminUsers() {
+  const response = await api.get<AdminUser[]>('/admin/users');
+  return response.data;
+}
+
+export async function updateAdminUserRole(userId: string, role: UserRole) {
+  const response = await api.patch<AdminUser>(`/admin/users/${userId}/role`, { role });
+  return response.data;
+}
+
+export async function updateAdminUserStatus(userId: string, active: boolean) {
+  const response = await api.patch<AdminUser>(`/admin/users/${userId}/status`, { active });
+  return response.data;
+}
+
+export async function getProductionLines() {
+  const response = await api.get<ProductionLine[]>('/admin/production-lines');
   return response.data;
 }
 
