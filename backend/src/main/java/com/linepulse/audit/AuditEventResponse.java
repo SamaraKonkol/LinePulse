@@ -9,7 +9,7 @@ public record AuditEventResponse(
         String entityType,
         UUID entityId,
         String description,
-        String actorEmail,
+        String actorRegistration,
         Instant createdAt
 ) {
     static AuditEventResponse from(AuditEvent event) {
@@ -19,7 +19,7 @@ public record AuditEventResponse(
                 event.getEntityType(),
                 event.getEntityId(),
                 event.getDescription(),
-                event.getActorEmail(),
+                event.getActorRegistration(),
                 event.getCreatedAt()
         );
     }
