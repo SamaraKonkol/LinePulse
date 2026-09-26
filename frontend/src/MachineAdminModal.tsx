@@ -34,85 +34,32 @@ function MachineAdminModal({ machine, productionLines, loading, onClose, onSubmi
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    onSubmit({
-      productionLineId,
-      name,
-      assetCode,
-      manufacturer: manufacturer || undefined,
-      model: model || undefined,
-      serialNumber: serialNumber || undefined,
-      status,
-      installedAt: installedAt || undefined,
-    });
+    onSubmit({ productionLineId, name, assetCode, manufacturer: manufacturer || undefined, model: model || undefined, serialNumber: serialNumber || undefined, status, installedAt: installedAt || undefined });
   }
 
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="machine-admin-title" onMouseDown={(event) => event.stopPropagation()}>
         <div className="modal-header">
-          <div>
-            <span className="eyebrow">Administração de ativos</span>
-            <h2 id="machine-admin-title">{machine ? 'Editar máquina' : 'Cadastrar máquina'}</h2>
-          </div>
+          <div><span className="eyebrow">Administração de ativos</span><h2 id="machine-admin-title">{machine ? 'Editar máquina' : 'Cadastrar máquina'}</h2></div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar">×</button>
         </div>
 
         <form className="incident-form" onSubmit={handleSubmit}>
           <label>
-            Linha de produção
+            Planta / setor / linha
             <select value={productionLineId} onChange={(event) => setProductionLineId(event.target.value)} required>
-              {activeLines.map((line) => (
-                <option key={line.id} value={line.id}>{line.code === line.name ? line.name : `${line.code} · ${line.name}`}</option>
-              ))}
+              {activeLines.map((line) => <option key={line.id} value={line.id}>{line.plant} · {line.sector} · {line.code} — {line.name}</option>)}
             </select>
           </label>
-
-          <label>
-            Código do ativo
-            <input value={assetCode} onChange={(event) => setAssetCode(event.target.value)} required maxLength={80} placeholder="Ex.: PRENSA-01" />
-          </label>
-
-          <label>
-            Nome
-            <input value={name} onChange={(event) => setName(event.target.value)} required maxLength={160} placeholder="Ex.: Prensa hidráulica" />
-          </label>
-
-          <label>
-            Fabricante
-            <input value={manufacturer} onChange={(event) => setManufacturer(event.target.value)} maxLength={160} />
-          </label>
-
-          <label>
-            Modelo
-            <input value={model} onChange={(event) => setModel(event.target.value)} maxLength={160} />
-          </label>
-
-          <label>
-            Número de série
-            <input value={serialNumber} onChange={(event) => setSerialNumber(event.target.value)} maxLength={160} />
-          </label>
-
-          {!machine && (
-            <label>
-              Status inicial
-              <select value={status} onChange={(event) => setStatus(event.target.value as MachineStatus)}>
-                <option value="RUNNING">Operando</option>
-                <option value="STOPPED">Parada</option>
-                <option value="MAINTENANCE">Manutenção</option>
-                <option value="INACTIVE">Inativa</option>
-              </select>
-            </label>
-          )}
-
-          <label>
-            Data de instalação
-            <input type="date" value={installedAt} onChange={(event) => setInstalledAt(event.target.value)} />
-          </label>
-
-          <div className="modal-actions">
-            <button type="button" className="secondary-button" onClick={onClose}>Cancelar</button>
-            <button className="primary-button" disabled={loading || !productionLineId}>{loading ? 'Salvando...' : machine ? 'Salvar alterações' : 'Cadastrar máquina'}</button>
-          </div>
+          <label>Código do ativo<input value={assetCode} onChange={(event) => setAssetCode(event.target.value)} required maxLength={80} placeholder="Ex.: PRENSA-01" /></label>
+          <label>Nome<input value={name} onChange={(event) => setName(event.target.value)} required maxLength={160} placeholder="Ex.: Prensa hidráulica" /></label>
+          <label>Fabricante<input value={manufacturer} onChange={(event) => setManufacturer(event.target.value)} maxLength={160} /></label>
+          <label>Modelo<input value={model} onChange={(event) => setModel(event.target.value)} maxLength={160} /></label>
+          <label>Número de série<input value={serialNumber} onChange={(event) => setSerialNumber(event.target.value)} maxLength={160} /></label>
+          {!machine && <label>Status inicial<select value={status} onChange={(event) => setStatus(event.target.value as MachineStatus)}><option value="RUNNING">Operando</option><option value="STOPPED">Parada</option><option value="MAINTENANCE">Manutenção</option><option value="INACTIVE">Inativa</option></select></label>}
+          <label>Data de instalação<input type="date" value={installedAt} onChange={(event) => setInstalledAt(event.target.value)} /></label>
+          <div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancelar</button><button className="primary-button" disabled={loading || !productionLineId}>{loading ? 'Salvando...' : machine ? 'Salvar alterações' : 'Cadastrar máquina'}</button></div>
         </form>
       </section>
     </div>
