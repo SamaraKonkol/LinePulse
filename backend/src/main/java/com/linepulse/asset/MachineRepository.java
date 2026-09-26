@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MachineRepository extends JpaRepository<Machine, UUID> {
     boolean existsByAssetCodeIgnoreCase(String assetCode);
+    boolean existsByAssetCodeIgnoreCaseAndIdNot(String assetCode, UUID id);
     long countByStatus(MachineStatus status);
     long countByStatusNot(MachineStatus status);
 }

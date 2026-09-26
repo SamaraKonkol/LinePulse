@@ -57,6 +57,17 @@ public class Machine {
         this.updatedAt = Instant.now();
     }
 
+    public void updateDetails(ProductionLine productionLine, String name, String assetCode, String manufacturer, String model, String serialNumber, LocalDate installedAt) {
+        this.productionLine = productionLine;
+        this.name = name;
+        this.assetCode = assetCode;
+        this.manufacturer = manufacturer;
+        this.model = model;
+        this.serialNumber = serialNumber;
+        this.installedAt = installedAt;
+        this.updatedAt = Instant.now();
+    }
+
     public UUID getId() {
         return id;
     }
