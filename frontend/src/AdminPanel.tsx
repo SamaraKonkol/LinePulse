@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, ShieldCheck } from 'lucide-react';
+import { Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import MachineAdminModal, { type MachineDraft } from './MachineAdminModal';
 import UserAdminModal from './UserAdminModal';
-import { createAdminUser, createMachine, getAdminUsers, getProductionLines, updateAdminUserRole, updateAdminUserStatus, updateMachine } from './services/api';
+import { createAdminUser, createMachine, deleteAdminUser, getAdminUsers, getProductionLines, updateAdminUserRole, updateAdminUserStatus, updateMachine } from './services/api';
 import type { Machine, ProductionLine, UserRole } from './types/api';
 import './admin.css';
 
@@ -71,6 +71,11 @@ function AdminPanel({ currentUserId, machines }: Props) {
     onSuccess: refreshAdmin,
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: deleteAdminUser,
+    onSuccess: refreshAdmin,
+  });
+
   const createMachineMutation = useMutation({
     mutationFn: createMachine,
     onSuccess: async () => {
@@ -106,7 +111,13 @@ function AdminPanel({ currentUserId, machines }: Props) {
     createMachineMutation.mutate(draft);
   }
 
-  const mutationError = createUserMutation.isError || roleMutation.isError || statusMutation.isError || createMachineMutation.isError || editMachineMutation.isError;
+  function confirmDeleteUser(userId: string, name: string, registration: string) {
+    if (window.confirm(`Excluir definitivamente ${name} · cadastro ${registration}?`)) {
+      deleteUserMutation.mutate(userId);
+    }
+  }
+
+  const mutationError = createUserMutation.isError || roleMutation.isError || statusMutation.isError || deleteUserMutation.isError || createMachineMutation.isError || editMachineMutation.isError;
   const savingMachine = createMachineMutation.isPending || editMachineMutation.isPending;
 
   return (
@@ -172,7 +183,7 @@ function AdminPanel({ currentUserId, machines }: Props) {
                 <div className={`admin-user-row ${!user.active ? 'inactive' : ''}`} key={user.id}>
                   <div className="admin-user-copy">
                     <strong>{user.name}</strong>
-                    <span>{user.email}</span>
+                    <span>Cadastro {user.registration}</span>
                     {user.demoAccount && <small>Conta demo fixa</small>}
                     {user.id === currentUserId && <small>Sua conta</small>}
                   </div>
@@ -191,6 +202,16 @@ function AdminPanel({ currentUserId, machines }: Props) {
                     onClick={() => statusMutation.mutate({ userId: user.id, active: !user.active })}
                   >
                     {user.active ? 'Ativo' : 'Inativo'}
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-delete-button"
+                    disabled={locked || deleteUserMutation.isPending}
+                    onClick={() => confirmDeleteUser(user.id, user.name, user.registration)}
+                    aria-label={`Excluir ${user.name}`}
+                    title={locked ? 'Esta conta não pode ser excluída' : 'Excluir usuário'}
+                  >
+                    <Trash2 size={16} />
                   </button>
                 </div>
               );
