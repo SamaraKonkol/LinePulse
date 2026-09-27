@@ -4,6 +4,7 @@ import com.linepulse.asset.Machine;
 import com.linepulse.asset.MachineRepository;
 import com.linepulse.audit.AuditService;
 import com.linepulse.common.NotFoundException;
+import com.linepulse.organization.OrganizationService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -18,24 +19,28 @@ public class MaintenancePlanService {
     private final MachineRepository machineRepository;
     private final WorkOrderService workOrderService;
     private final AuditService auditService;
+    private final OrganizationService organizationService;
 
-    public MaintenancePlanService(MaintenancePlanRepository maintenancePlanRepository, MachineRepository machineRepository, WorkOrderService workOrderService, AuditService auditService) {
+    public MaintenancePlanService(MaintenancePlanRepository maintenancePlanRepository, MachineRepository machineRepository, WorkOrderService workOrderService, AuditService auditService, OrganizationService organizationService) {
         this.maintenancePlanRepository = maintenancePlanRepository;
         this.machineRepository = machineRepository;
         this.workOrderService = workOrderService;
         this.auditService = auditService;
+        this.organizationService = organizationService;
     }
 
     @Transactional(readOnly = true)
     public List<MaintenancePlanResponse> findAll() {
-        return maintenancePlanRepository.findAllByOrderByNextDueDateAsc().stream()
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return maintenancePlanRepository.findAllByMachine_ProductionLine_Sector_Plant_Organization_IdOrderByNextDueDateAsc(organizationId).stream()
                 .map(MaintenancePlanResponse::from)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<MaintenancePlanResponse> findDueThrough(LocalDate date) {
-        return maintenancePlanRepository.findByActiveTrueAndNextDueDateLessThanEqualOrderByNextDueDateAsc(date).stream()
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return maintenancePlanRepository.findByMachine_ProductionLine_Sector_Plant_Organization_IdAndActiveTrueAndNextDueDateLessThanEqualOrderByNextDueDateAsc(organizationId, date).stream()
                 .map(MaintenancePlanResponse::from)
                 .toList();
     }
@@ -100,12 +105,14 @@ public class MaintenancePlanService {
     }
 
     private MaintenancePlan findPlan(UUID id) {
-        return maintenancePlanRepository.findById(id)
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return maintenancePlanRepository.findByIdAndMachine_ProductionLine_Sector_Plant_Organization_Id(id, organizationId)
                 .orElseThrow(() -> new NotFoundException("Maintenance plan not found"));
     }
 
     private Machine findMachine(UUID id) {
-        return machineRepository.findById(id)
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return machineRepository.findByIdAndProductionLine_Sector_Plant_Organization_Id(id, organizationId)
                 .orElseThrow(() -> new NotFoundException("Machine not found"));
     }
 }
