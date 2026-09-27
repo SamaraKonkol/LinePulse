@@ -14,6 +14,7 @@ export interface IncidentTrendPoint {
 
 export type IncidentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CANCELLED';
+export type IncidentCategory = 'MECHANICAL' | 'ELECTRICAL' | 'HYDRAULIC' | 'PNEUMATIC' | 'SAFETY' | 'PROCESS' | 'OTHER';
 export type UserRole = 'ADMIN' | 'TECHNICIAN' | 'OPERATOR';
 export type MachineStatus = 'RUNNING' | 'STOPPED' | 'MAINTENANCE' | 'INACTIVE';
 export type MaintenanceType = 'CORRECTIVE' | 'PREVENTIVE' | 'INSPECTION';
@@ -28,9 +29,13 @@ export interface Incident {
   machineName: string;
   title: string;
   description: string;
+  category: IncidentCategory;
   priority: IncidentPriority;
   status: IncidentStatus;
+  rootCause: string | null;
+  solution: string | null;
   occurredAt: string;
+  resolvedAt: string | null;
   createdAt: string;
 }
 
@@ -104,6 +109,29 @@ export interface WorkOrder {
   createdAt: string;
 }
 
+export interface MaintenancePlan {
+  id: string;
+  machineId: string;
+  assetCode: string;
+  machineName: string;
+  title: string;
+  description: string;
+  intervalDays: number;
+  nextDueDate: string;
+  priority: WorkOrderPriority;
+  active: boolean;
+  lastGeneratedAt: string | null;
+}
+
+export interface MaintenancePlanInput {
+  machineId: string;
+  title: string;
+  description: string;
+  intervalDays: number;
+  nextDueDate: string;
+  priority: WorkOrderPriority;
+}
+
 export interface Downtime {
   id: string;
   machineId: string;
@@ -140,8 +168,14 @@ export interface CreateIncidentInput {
   machineId: string;
   title: string;
   description: string;
+  category: IncidentCategory;
   priority: IncidentPriority;
   occurredAt?: string;
+}
+
+export interface ResolveIncidentInput {
+  rootCause: string;
+  solution: string;
 }
 
 export interface CreateWorkOrderInput {
