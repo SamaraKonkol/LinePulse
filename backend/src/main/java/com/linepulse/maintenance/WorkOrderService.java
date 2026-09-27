@@ -39,22 +39,31 @@ public class WorkOrderService {
         Machine machine = machineRepository.findById(request.machineId())
                 .orElseThrow(() -> new NotFoundException("Machine not found"));
         Incident incident = resolveIncident(request.incidentId(), machine);
+        return createOrder(machine, incident, request.title(), request.description(), request.type(), request.priority(), request.scheduledFor(), "WORK_ORDER_CREATED");
+    }
+
+    @Transactional
+    public WorkOrderResponse createPreventive(Machine machine, String title, String description, WorkOrderPriority priority, Instant scheduledFor) {
+        return createOrder(machine, null, title, description, MaintenanceType.PREVENTIVE, priority, scheduledFor, "PREVENTIVE_WORK_ORDER_CREATED");
+    }
+
+    private WorkOrderResponse createOrder(Machine machine, Incident incident, String title, String description, MaintenanceType type, WorkOrderPriority priority, Instant scheduledFor, String auditAction) {
         Instant now = Instant.now();
         WorkOrder workOrder = new WorkOrder(
                 UUID.randomUUID(),
                 machine,
                 incident,
-                request.title().trim(),
-                request.description().trim(),
-                request.type(),
-                request.priority(),
+                title.trim(),
+                description.trim(),
+                type,
+                priority,
                 WorkOrderStatus.OPEN,
-                request.scheduledFor(),
+                scheduledFor,
                 now,
                 now
         );
         WorkOrder saved = workOrderRepository.save(workOrder);
-        auditService.record("WORK_ORDER_CREATED", "WORK_ORDER", saved.getId(), "Ordem criada para " + machine.getAssetCode() + ": " + saved.getTitle());
+        auditService.record(auditAction, "WORK_ORDER", saved.getId(), "Ordem criada para " + machine.getAssetCode() + ": " + saved.getTitle());
         return WorkOrderResponse.from(saved);
     }
 
