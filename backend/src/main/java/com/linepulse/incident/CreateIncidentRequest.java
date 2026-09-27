@@ -9,6 +9,7 @@ public record CreateIncidentRequest(
         @NotNull UUID machineId,
         @NotBlank String title,
         @NotBlank String description,
+        @NotNull IncidentCategory category,
         @NotNull IncidentPriority priority,
         Instant occurredAt
 ) {
