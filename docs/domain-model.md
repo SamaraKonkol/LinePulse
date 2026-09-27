@@ -11,6 +11,7 @@ erDiagram
     MACHINE ||--o{ INCIDENT : has
     MACHINE ||--o{ WORK_ORDER : has
     MACHINE ||--o{ DOWNTIME : has
+    MACHINE ||--o{ MAINTENANCE_PLAN : schedules
 
     INCIDENT o|--o{ WORK_ORDER : originates
     INCIDENT o|--o{ DOWNTIME : relates_to
@@ -27,18 +28,24 @@ erDiagram
     PLANT {
         uuid id PK
         string name
+        string code
+        boolean active
     }
 
     SECTOR {
         uuid id PK
         uuid plant_id FK
         string name
+        string code
+        boolean active
     }
 
     PRODUCTION_LINE {
         uuid id PK
         uuid sector_id FK
         string name
+        string code
+        boolean active
     }
 
     MACHINE {
@@ -53,9 +60,24 @@ erDiagram
         uuid id PK
         uuid machine_id FK
         string title
+        string category
         string priority
         string status
+        text root_cause
+        text solution
         timestamp occurred_at
+        timestamp resolved_at
+    }
+
+    MAINTENANCE_PLAN {
+        uuid id PK
+        uuid machine_id FK
+        string title
+        int interval_days
+        date next_due_date
+        string priority
+        boolean active
+        timestamp last_generated_at
     }
 
     WORK_ORDER {
@@ -65,6 +87,7 @@ erDiagram
         string type
         string priority
         string status
+        timestamp scheduled_for
         timestamp started_at
         timestamp completed_at
     }
@@ -87,9 +110,13 @@ erDiagram
     }
 ```
 
-## Main lifecycle rules
+## Industrial hierarchy lifecycle
 
-### Incident
+Plants, sectors and production lines use an `active` flag instead of destructive deletion. Administrators can edit names/codes and move a sector to another plant or a line to another sector. New machines can only be assigned through the active hierarchy.
+
+Machines use operational statuses for day-to-day work. `INACTIVE` is reserved for the administrative retirement/reactivation lifecycle so historical incidents, maintenance and downtime remain attributable to the asset.
+
+## Incident lifecycle
 
 ```text
 OPEN → IN_PROGRESS → RESOLVED
@@ -97,23 +124,37 @@ OPEN → IN_PROGRESS → RESOLVED
 ```
 
 - new incidents start as `OPEN`;
+- operators select a technical category and priority when reporting;
 - only an open incident can be started;
 - only an incident in progress can be resolved;
+- resolving requires a root cause and applied solution;
 - open or in-progress incidents can be cancelled;
 - resolved and cancelled incidents are terminal.
 
-### Maintenance work order
+Technical categories are `MECHANICAL`, `ELECTRICAL`, `HYDRAULIC`, `PNEUMATIC`, `SAFETY`, `PROCESS` and `OTHER`.
+
+## Preventive maintenance plan
+
+A preventive plan belongs to one machine and defines a title, procedure, recurrence interval in days, next due date, priority and active state.
+
+When an active plan reaches its due date, the scheduler generates a regular `PREVENTIVE` work order through the existing maintenance domain. The plan then advances its due date until the next date is in the future. This prevents a long-offline environment from creating one historical order for every missed recurrence.
+
+Administrators can also generate the next preventive order manually, edit a plan, pause it or reactivate it.
+
+## Maintenance work order lifecycle
 
 ```text
 OPEN → IN_PROGRESS → COMPLETED
 ```
 
 - new work orders start as `OPEN`;
+- corrective/inspection orders can be created by technician/admin workflows;
+- preventive orders can be generated from maintenance plans;
 - only open work orders can be started;
 - only work orders in progress can be completed;
 - start and completion timestamps are used to calculate MTTR.
 
-### Downtime
+## Downtime
 
 A downtime record has a start timestamp and an optional end timestamp.
 
@@ -137,4 +178,4 @@ Deleting a user removes access immediately because authenticated requests reload
 
 Audit events intentionally use a generic `entityType + entityId` pair instead of foreign keys to every domain table. This keeps the audit subsystem independent of individual domain relationships and allows it to record actions for multiple entity types through one structure.
 
-The audit actor is stored as the employee registration, so historical actions remain attributable even if the user account is later deleted.
+The audit actor is stored as the employee registration, so historical actions remain attributable even if the user account is later deleted. Scheduler-generated actions are recorded with the system context when there is no authenticated employee.
