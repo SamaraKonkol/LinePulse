@@ -26,12 +26,18 @@ public class Incident {
     private String description;
 
     @Enumerated(EnumType.STRING)
+    private IncidentCategory category;
+
+    @Enumerated(EnumType.STRING)
     private IncidentPriority priority;
 
     @Enumerated(EnumType.STRING)
     private IncidentStatus status;
 
+    private String rootCause;
+    private String solution;
     private Instant occurredAt;
+    private Instant resolvedAt;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -39,10 +45,15 @@ public class Incident {
     }
 
     public Incident(UUID id, Machine machine, String title, String description, IncidentPriority priority, IncidentStatus status, Instant occurredAt, Instant createdAt, Instant updatedAt) {
+        this(id, machine, title, description, IncidentCategory.OTHER, priority, status, occurredAt, createdAt, updatedAt);
+    }
+
+    public Incident(UUID id, Machine machine, String title, String description, IncidentCategory category, IncidentPriority priority, IncidentStatus status, Instant occurredAt, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.machine = machine;
         this.title = title;
         this.description = description;
+        this.category = category;
         this.priority = priority;
         this.status = status;
         this.occurredAt = occurredAt;
@@ -55,9 +66,16 @@ public class Incident {
         this.updatedAt = at;
     }
 
-    public void resolve(Instant at) {
+    public void resolve(String rootCause, String solution, Instant at) {
         this.status = IncidentStatus.RESOLVED;
+        this.rootCause = rootCause;
+        this.solution = solution;
+        this.resolvedAt = at;
         this.updatedAt = at;
+    }
+
+    public void resolve(Instant at) {
+        resolve("Não informado", "Não informado", at);
     }
 
     public void cancel(Instant at) {
@@ -69,8 +87,12 @@ public class Incident {
     public Machine getMachine() { return machine; }
     public String getTitle() { return title; }
     public String getDescription() { return description; }
+    public IncidentCategory getCategory() { return category; }
     public IncidentPriority getPriority() { return priority; }
     public IncidentStatus getStatus() { return status; }
+    public String getRootCause() { return rootCause; }
+    public String getSolution() { return solution; }
     public Instant getOccurredAt() { return occurredAt; }
+    public Instant getResolvedAt() { return resolvedAt; }
     public Instant getCreatedAt() { return createdAt; }
 }
