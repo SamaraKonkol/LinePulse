@@ -1,10 +1,11 @@
-import { CalendarClock, Pencil, Play, Plus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CalendarClock, Pencil, Play, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import MaintenancePlanModal from './MaintenancePlanModal';
 import { createMaintenancePlan, generateMaintenancePlan, getMaintenancePlans, updateMaintenancePlan, updateMaintenancePlanStatus } from './services/api';
 import type { Machine, MaintenancePlan, MaintenancePlanInput } from './types/api';
 import { getApiErrorMessage } from './utils/apiError';
+import './preventive.css';
 
 function daysUntil(date: string) {
   const today = new Date();
