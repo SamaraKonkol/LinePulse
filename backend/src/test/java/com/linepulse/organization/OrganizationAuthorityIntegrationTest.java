@@ -45,16 +45,17 @@ class OrganizationAuthorityIntegrationTest {
     void setUp() {
         userRepository.deleteAll();
         Instant now = Instant.now();
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
         UserAccount user = userRepository.save(new UserAccount(
                 UUID.randomUUID(), "Usuário Multiempresa", "MULTI01", passwordEncoder.encode("TestPass123!"),
                 UserRole.ADMIN, true, now, now
         ));
 
         Organization adminOrganization = organizationRepository.save(new Organization(
-                UUID.randomUUID(), "Empresa Admin", "empresa-admin", OrganizationType.COMPANY, true, now
+                UUID.randomUUID(), "Empresa Admin", "empresa-admin-" + suffix, OrganizationType.COMPANY, true, now
         ));
         operatorOrganization = organizationRepository.save(new Organization(
-                UUID.randomUUID(), "Empresa Operador", "empresa-operador", OrganizationType.COMPANY, true, now
+                UUID.randomUUID(), "Empresa Operador", "empresa-operador-" + suffix, OrganizationType.COMPANY, true, now
         ));
         membershipRepository.save(new OrganizationMembership(adminOrganization, user, OrganizationRole.OWNER, true, now));
         membershipRepository.save(new OrganizationMembership(operatorOrganization, user, OrganizationRole.OPERATOR, true, now));

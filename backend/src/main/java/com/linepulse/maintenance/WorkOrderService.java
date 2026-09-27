@@ -86,7 +86,7 @@ public class WorkOrderService {
             throw new ConflictException("Only open work orders can be started");
         }
         workOrder.start(Instant.now());
-        auditService.recordForOrganization(machineOrganization(workOrder.getMachine()), "WORK_ORDER_STARTED", "WORK_ORDER", workOrder.getId(), "Ordem iniciada em " + workOrder.getMachine().getAssetCode());
+        auditService.record("WORK_ORDER_STARTED", "WORK_ORDER", workOrder.getId(), "Ordem iniciada em " + workOrder.getMachine().getAssetCode());
         return WorkOrderResponse.from(workOrder);
     }
 
@@ -97,7 +97,7 @@ public class WorkOrderService {
             throw new ConflictException("Only work orders in progress can be completed");
         }
         workOrder.complete(Instant.now());
-        auditService.recordForOrganization(machineOrganization(workOrder.getMachine()), "WORK_ORDER_COMPLETED", "WORK_ORDER", workOrder.getId(), "Ordem concluída em " + workOrder.getMachine().getAssetCode());
+        auditService.record("WORK_ORDER_COMPLETED", "WORK_ORDER", workOrder.getId(), "Ordem concluída em " + workOrder.getMachine().getAssetCode());
         return WorkOrderResponse.from(workOrder);
     }
 
