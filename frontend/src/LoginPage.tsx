@@ -28,8 +28,11 @@ function LoginPage({ onAuthenticated }: Props) {
       const auth = await login(registration, password);
       storeAuth(auth);
       onAuthenticated(auth);
-    } catch {
-      setError('Não foi possível entrar. Confira cadastro e senha.');
+    } catch (requestError: unknown) {
+      const status = typeof requestError === 'object' && requestError !== null && 'response' in requestError
+        ? (requestError as { response?: { status?: number } }).response?.status
+        : undefined;
+      setError(status === 429 ? 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.' : 'Não foi possível entrar. Confira cadastro e senha.');
     } finally {
       setLoading(false);
     }
@@ -54,8 +57,8 @@ function LoginPage({ onAuthenticated }: Props) {
           <h2>Entrar no LinePulse</h2>
           <p>Use o cadastro e a senha fornecidos pelo administrador da operação.</p>
 
-          <div className="demo-access">
-            <span>Perfis demo</span>
+          {import.meta.env.DEV && <div className="demo-access">
+            <span>Perfis demo locais</span>
             <div className="demo-access-actions">
               {demoAccounts.map((account) => (
                 <button type="button" key={account.registration} onClick={() => setRegistration(account.registration)}>
@@ -63,7 +66,7 @@ function LoginPage({ onAuthenticated }: Props) {
                 </button>
               ))}
             </div>
-          </div>
+          </div>}
 
           <form onSubmit={handleSubmit}>
             <label>

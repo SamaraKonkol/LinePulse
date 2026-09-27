@@ -24,12 +24,17 @@ public class AuthService {
     @Transactional
     public AuthResponse login(LoginRequest request) {
         String registration = normalizeRegistration(request.registration());
+        LoginAttemptTracker.checkAllowed(registration);
+
         UserAccount user = userRepository.findByRegistrationIgnoreCase(registration)
                 .filter(UserAccount::isActive)
-                .orElseThrow(() -> new UnauthorizedException("Invalid registration or password"));
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+                .orElse(null);
+        if (user == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            LoginAttemptTracker.recordFailure(registration);
             throw new UnauthorizedException("Invalid registration or password");
         }
+
+        LoginAttemptTracker.recordSuccess(registration);
         organizationService.ensureDefaultMembership(user);
         return new AuthResponse(jwtService.generate(user), AuthUserResponse.from(user));
     }
