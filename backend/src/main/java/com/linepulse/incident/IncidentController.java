@@ -39,8 +39,8 @@ public class IncidentController {
     }
 
     @PatchMapping("/{id}/resolve")
-    IncidentResponse resolve(@PathVariable UUID id) {
-        return incidentService.resolve(id);
+    IncidentResponse resolve(@PathVariable UUID id, @Valid @RequestBody ResolveIncidentRequest request) {
+        return incidentService.resolve(id, request);
     }
 
     @PatchMapping("/{id}/cancel")
