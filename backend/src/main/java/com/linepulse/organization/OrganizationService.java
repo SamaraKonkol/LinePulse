@@ -5,14 +5,19 @@ import com.linepulse.auth.UserRole;
 import com.linepulse.common.NotFoundException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
 public class OrganizationService {
     public static final String DEFAULT_SLUG = "linepulse-default";
+    public static final String ORGANIZATION_HEADER = "X-LinePulse-Organization";
 
     private final OrganizationRepository organizationRepository;
     private final OrganizationMembershipRepository membershipRepository;
@@ -35,11 +40,17 @@ public class OrganizationService {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new AccessDeniedException("Usuário não autenticado.");
         }
-        return membershipRepository
-                .findFirstByUser_RegistrationIgnoreCaseAndActiveTrueOrderByCreatedAtAsc(authentication.getName())
-                .map(OrganizationMembership::getOrganization)
-                .filter(Organization::isActive)
-                .orElseThrow(() -> new AccessDeniedException("Nenhuma organização ativa disponível para este usuário."));
+        String registration = authentication.getName();
+        Optional<UUID> requestedOrganization = requestedOrganizationId();
+        OrganizationMembership membership = requestedOrganization
+                .flatMap(id -> membershipRepository.findByOrganization_IdAndUser_RegistrationIgnoreCaseAndActiveTrue(id, registration))
+                .orElseGet(() -> membershipRepository
+                        .findFirstByUser_RegistrationIgnoreCaseAndActiveTrueOrderByCreatedAtAsc(registration)
+                        .orElseThrow(() -> new AccessDeniedException("Nenhuma organização ativa disponível para este usuário.")));
+        if (!membership.getOrganization().isActive()) {
+            throw new AccessDeniedException("A organização selecionada está inativa.");
+        }
+        return membership.getOrganization();
     }
 
     @Transactional
@@ -71,6 +82,22 @@ public class OrganizationService {
                     true,
                     Instant.now()
             ));
+        }
+    }
+
+    private Optional<UUID> requestedOrganizationId() {
+        var attributes = RequestContextHolder.getRequestAttributes();
+        if (!(attributes instanceof ServletRequestAttributes servletAttributes)) {
+            return Optional.empty();
+        }
+        String value = servletAttributes.getRequest().getHeader(ORGANIZATION_HEADER);
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(UUID.fromString(value.trim()));
+        } catch (IllegalArgumentException exception) {
+            throw new AccessDeniedException("Organização selecionada inválida.");
         }
     }
 
