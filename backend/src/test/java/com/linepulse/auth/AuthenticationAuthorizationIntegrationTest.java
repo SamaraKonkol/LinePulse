@@ -111,9 +111,50 @@ class AuthenticationAuthorizationIntegrationTest {
                         .header("Authorization", "Bearer " + operatorToken))
                 .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/audit-events/page")
+                        .header("Authorization", "Bearer " + operatorToken))
+                .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/audit-events")
                         .header("Authorization", "Bearer " + technicianToken))
                 .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/audit-events/page")
+                        .header("Authorization", "Bearer " + technicianToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldRejectOperatorMaintenanceAndIncidentManagementRequestsBeforeControllerExecution() throws Exception {
+        String operatorToken = login("OP1001", "TestPass123!");
+        UUID randomId = UUID.randomUUID();
+
+        mockMvc.perform(post("/api/work-orders")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/incidents/{id}/start", randomId)
+                        .header("Authorization", "Bearer " + operatorToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/maintenance-plans")
+                        .header("Authorization", "Bearer " + operatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldRejectTechnicianAdministrativeStructureChanges() throws Exception {
+        String technicianToken = login("TEC1001", "TestPass123!");
+
+        mockMvc.perform(post("/api/admin/structure/plants")
+                        .header("Authorization", "Bearer " + technicianToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
