@@ -13,4 +13,5 @@ public interface OrganizationMembershipRepository extends JpaRepository<Organiza
     List<OrganizationMembership> findByOrganization_IdOrderByUser_NameAsc(UUID organizationId);
     List<OrganizationMembership> findByOrganization_IdAndActiveTrueOrderByUser_NameAsc(UUID organizationId);
     boolean existsByOrganization_IdAndUser_Id(UUID organizationId, UUID userId);
+    boolean existsByUser_RegistrationIgnoreCase(String registration);
 }

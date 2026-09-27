@@ -55,7 +55,7 @@ public class OrganizationService {
 
     @Transactional
     public void ensureDefaultMembership(UserAccount user) {
-        if (!membershipRepository.findByUser_RegistrationIgnoreCaseAndActiveTrueOrderByOrganization_NameAsc(user.getRegistration()).isEmpty()) {
+        if (membershipRepository.existsByUser_RegistrationIgnoreCase(user.getRegistration())) {
             return;
         }
         membershipRepository.save(new OrganizationMembership(
@@ -69,10 +69,13 @@ public class OrganizationService {
 
     @Transactional
     public void inheritPrimaryOrganization(String actorRegistration, UserAccount newUser) {
-        Organization organization = membershipRepository
-                .findFirstByUser_RegistrationIgnoreCaseAndActiveTrueOrderByCreatedAtAsc(actorRegistration)
+        Organization organization = requestedOrganizationId()
+                .flatMap(id -> membershipRepository.findByOrganization_IdAndUser_RegistrationIgnoreCaseAndActiveTrue(id, actorRegistration))
                 .map(OrganizationMembership::getOrganization)
-                .orElseGet(this::defaultOrganization);
+                .orElseGet(() -> membershipRepository
+                        .findFirstByUser_RegistrationIgnoreCaseAndActiveTrueOrderByCreatedAtAsc(actorRegistration)
+                        .map(OrganizationMembership::getOrganization)
+                        .orElseGet(this::defaultOrganization));
 
         if (!membershipRepository.existsByOrganization_IdAndUser_Id(organization.getId(), newUser.getId())) {
             membershipRepository.save(new OrganizationMembership(
