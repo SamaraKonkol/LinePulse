@@ -3,6 +3,8 @@ package com.linepulse.asset;
 import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
+import com.linepulse.organization.Organization;
+import com.linepulse.organization.OrganizationService;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -17,22 +19,26 @@ public class IndustrialStructureService {
     private final SectorRepository sectorRepository;
     private final ProductionLineRepository productionLineRepository;
     private final AuditService auditService;
+    private final OrganizationService organizationService;
 
     public IndustrialStructureService(
             PlantRepository plantRepository,
             SectorRepository sectorRepository,
             ProductionLineRepository productionLineRepository,
-            AuditService auditService
+            AuditService auditService,
+            OrganizationService organizationService
     ) {
         this.plantRepository = plantRepository;
         this.sectorRepository = sectorRepository;
         this.productionLineRepository = productionLineRepository;
         this.auditService = auditService;
+        this.organizationService = organizationService;
     }
 
     @Transactional(readOnly = true)
     public List<PlantResponse> findPlants() {
-        return plantRepository.findAll().stream()
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return plantRepository.findAllByOrganization_Id(organizationId).stream()
                 .sorted(Comparator.comparing(Plant::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(PlantResponse::from)
                 .toList();
@@ -40,7 +46,8 @@ public class IndustrialStructureService {
 
     @Transactional(readOnly = true)
     public List<SectorResponse> findSectors() {
-        return sectorRepository.findAll().stream()
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return sectorRepository.findAllByPlant_Organization_Id(organizationId).stream()
                 .sorted(Comparator.comparing(Sector::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(SectorResponse::from)
                 .toList();
@@ -48,7 +55,8 @@ public class IndustrialStructureService {
 
     @Transactional(readOnly = true)
     public List<ProductionLineResponse> findLines() {
-        return productionLineRepository.findAll().stream()
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return productionLineRepository.findAllBySector_Plant_Organization_Id(organizationId).stream()
                 .sorted(Comparator.comparing(ProductionLine::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(ProductionLineResponse::from)
                 .toList();
@@ -56,11 +64,12 @@ public class IndustrialStructureService {
 
     @Transactional
     public PlantResponse createPlant(CreatePlantRequest request) {
+        Organization organization = organizationService.currentOrganization();
         String code = normalizeCode(request.code());
-        if (plantRepository.existsByCodeIgnoreCase(code)) {
-            throw new ConflictException("Já existe uma planta com este código.");
+        if (plantRepository.existsByOrganization_IdAndCodeIgnoreCase(organization.getId(), code)) {
+            throw new ConflictException("Já existe uma planta com este código nesta organização.");
         }
-        Plant saved = plantRepository.save(new Plant(UUID.randomUUID(), request.name().trim(), code, true, Instant.now()));
+        Plant saved = plantRepository.save(new Plant(UUID.randomUUID(), organization, request.name().trim(), code, true, Instant.now()));
         auditService.record("PLANT_CREATED", "PLANT", saved.getId(), "Planta " + saved.getCode() + " cadastrada");
         return PlantResponse.from(saved);
     }
@@ -69,8 +78,8 @@ public class IndustrialStructureService {
     public PlantResponse updatePlant(UUID id, UpdatePlantRequest request) {
         Plant plant = findPlant(id);
         String code = normalizeCode(request.code());
-        if (plantRepository.existsByCodeIgnoreCaseAndIdNot(code, id)) {
-            throw new ConflictException("Já existe uma planta com este código.");
+        if (plantRepository.existsByOrganization_IdAndCodeIgnoreCaseAndIdNot(plant.getOrganization().getId(), code, id)) {
+            throw new ConflictException("Já existe uma planta com este código nesta organização.");
         }
         plant.update(request.name().trim(), code);
         auditService.record("PLANT_UPDATED", "PLANT", plant.getId(), "Planta " + plant.getCode() + " atualizada");
@@ -158,15 +167,21 @@ public class IndustrialStructureService {
     }
 
     private Plant findPlant(UUID id) {
-        return plantRepository.findById(id).orElseThrow(() -> new NotFoundException("Planta não encontrada."));
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return plantRepository.findByIdAndOrganization_Id(id, organizationId)
+                .orElseThrow(() -> new NotFoundException("Planta não encontrada."));
     }
 
     private Sector findSector(UUID id) {
-        return sectorRepository.findById(id).orElseThrow(() -> new NotFoundException("Setor não encontrado."));
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return sectorRepository.findByIdAndPlant_Organization_Id(id, organizationId)
+                .orElseThrow(() -> new NotFoundException("Setor não encontrado."));
     }
 
     private ProductionLine findLine(UUID id) {
-        return productionLineRepository.findById(id).orElseThrow(() -> new NotFoundException("Linha de produção não encontrada."));
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return productionLineRepository.findByIdAndSector_Plant_Organization_Id(id, organizationId)
+                .orElseThrow(() -> new NotFoundException("Linha de produção não encontrada."));
     }
 
     private void validateSectorHierarchy(Sector sector) {
