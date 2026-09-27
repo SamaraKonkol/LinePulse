@@ -1,7 +1,11 @@
 package com.linepulse.asset;
 
+import com.linepulse.organization.Organization;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
@@ -11,6 +15,11 @@ import java.util.UUID;
 public class Plant {
     @Id
     private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "organization_id")
+    private Organization organization;
+
     private String name;
     private String code;
     private boolean active;
@@ -19,8 +28,9 @@ public class Plant {
     protected Plant() {
     }
 
-    public Plant(UUID id, String name, String code, boolean active, Instant createdAt) {
+    public Plant(UUID id, Organization organization, String name, String code, boolean active, Instant createdAt) {
         this.id = id;
+        this.organization = organization;
         this.name = name;
         this.code = code;
         this.active = active;
@@ -38,6 +48,10 @@ public class Plant {
 
     public UUID getId() {
         return id;
+    }
+
+    public Organization getOrganization() {
+        return organization;
     }
 
     public String getName() {
