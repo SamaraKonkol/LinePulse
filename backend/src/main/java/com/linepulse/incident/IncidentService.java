@@ -40,6 +40,7 @@ public class IncidentService {
                 machine,
                 request.title().trim(),
                 request.description().trim(),
+                request.category(),
                 request.priority(),
                 IncidentStatus.OPEN,
                 request.occurredAt() == null ? now : request.occurredAt(),
@@ -64,15 +65,20 @@ public class IncidentService {
     }
 
     @Transactional
-    public IncidentResponse resolve(UUID id) {
+    public IncidentResponse resolve(UUID id, ResolveIncidentRequest request) {
         Incident incident = findIncident(id);
         if (!IncidentLifecycle.canResolve(incident.getStatus())) {
             throw new ConflictException("Only incidents in progress can be resolved");
         }
-        incident.resolve(Instant.now());
+        incident.resolve(request.rootCause().trim(), request.solution().trim(), Instant.now());
         Incident saved = incidentRepository.save(incident);
-        auditService.record("INCIDENT_RESOLVED", "INCIDENT", saved.getId(), "Ocorrência resolvida em " + saved.getMachine().getAssetCode());
+        auditService.record("INCIDENT_RESOLVED", "INCIDENT", saved.getId(), "Ocorrência resolvida em " + saved.getMachine().getAssetCode() + " · causa: " + saved.getRootCause());
         return IncidentResponse.from(saved);
+    }
+
+    @Transactional
+    public IncidentResponse resolve(UUID id) {
+        return resolve(id, new ResolveIncidentRequest("Não informado", "Não informado"));
     }
 
     @Transactional
