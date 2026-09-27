@@ -10,9 +10,13 @@ public record IncidentResponse(
         String machineName,
         String title,
         String description,
+        IncidentCategory category,
         IncidentPriority priority,
         IncidentStatus status,
+        String rootCause,
+        String solution,
         Instant occurredAt,
+        Instant resolvedAt,
         Instant createdAt
 ) {
     static IncidentResponse from(Incident incident) {
@@ -23,9 +27,13 @@ public record IncidentResponse(
                 incident.getMachine().getName(),
                 incident.getTitle(),
                 incident.getDescription(),
+                incident.getCategory(),
                 incident.getPriority(),
                 incident.getStatus(),
+                incident.getRootCause(),
+                incident.getSolution(),
                 incident.getOccurredAt(),
+                incident.getResolvedAt(),
                 incident.getCreatedAt()
         );
     }
