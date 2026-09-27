@@ -5,6 +5,8 @@ import com.linepulse.auth.UserRole;
 import com.linepulse.common.NotFoundException;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,19 @@ public class OrganizationService {
         return membershipRepository.findByUser_RegistrationIgnoreCaseAndActiveTrueOrderByOrganization_NameAsc(registration).stream()
                 .map(OrganizationSummaryResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Organization currentOrganization() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AccessDeniedException("Usuário não autenticado.");
+        }
+        return membershipRepository
+                .findFirstByUser_RegistrationIgnoreCaseAndActiveTrueOrderByCreatedAtAsc(authentication.getName())
+                .map(OrganizationMembership::getOrganization)
+                .filter(Organization::isActive)
+                .orElseThrow(() -> new AccessDeniedException("Nenhuma organização ativa disponível para este usuário."));
     }
 
     @Transactional
