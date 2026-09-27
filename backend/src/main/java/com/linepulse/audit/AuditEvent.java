@@ -1,7 +1,11 @@
 package com.linepulse.audit;
 
+import com.linepulse.organization.Organization;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
@@ -11,6 +15,11 @@ import java.util.UUID;
 public class AuditEvent {
     @Id
     private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "organization_id")
+    private Organization organization;
+
     private String action;
     private String entityType;
     private UUID entityId;
@@ -21,8 +30,9 @@ public class AuditEvent {
     protected AuditEvent() {
     }
 
-    public AuditEvent(UUID id, String action, String entityType, UUID entityId, String description, String actorRegistration, Instant createdAt) {
+    public AuditEvent(UUID id, Organization organization, String action, String entityType, UUID entityId, String description, String actorRegistration, Instant createdAt) {
         this.id = id;
+        this.organization = organization;
         this.action = action;
         this.entityType = entityType;
         this.entityId = entityId;
@@ -32,6 +42,7 @@ public class AuditEvent {
     }
 
     public UUID getId() { return id; }
+    public Organization getOrganization() { return organization; }
     public String getAction() { return action; }
     public String getEntityType() { return entityType; }
     public UUID getEntityId() { return entityId; }
