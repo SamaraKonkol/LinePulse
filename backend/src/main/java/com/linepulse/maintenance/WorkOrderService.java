@@ -5,11 +5,15 @@ import com.linepulse.asset.MachineRepository;
 import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
+import com.linepulse.common.PageResponse;
 import com.linepulse.incident.Incident;
 import com.linepulse.incident.IncidentRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +38,13 @@ public class WorkOrderService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<WorkOrderResponse> findPage(int page, int size) {
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        Page<WorkOrder> result = workOrderRepository.findAll(PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "createdAt")));
+        return PageResponse.from(result, result.getContent().stream().map(WorkOrderResponse::from).toList());
+    }
+
     @Transactional
     public WorkOrderResponse create(CreateWorkOrderRequest request) {
         Machine machine = machineRepository.findById(request.machineId())
@@ -50,17 +61,8 @@ public class WorkOrderService {
     private WorkOrderResponse createOrder(Machine machine, Incident incident, String title, String description, MaintenanceType type, WorkOrderPriority priority, Instant scheduledFor, String auditAction) {
         Instant now = Instant.now();
         WorkOrder workOrder = new WorkOrder(
-                UUID.randomUUID(),
-                machine,
-                incident,
-                title.trim(),
-                description.trim(),
-                type,
-                priority,
-                WorkOrderStatus.OPEN,
-                scheduledFor,
-                now,
-                now
+                UUID.randomUUID(), machine, incident, title.trim(), description.trim(), type, priority,
+                WorkOrderStatus.OPEN, scheduledFor, now, now
         );
         WorkOrder saved = workOrderRepository.save(workOrder);
         auditService.record(auditAction, "WORK_ORDER", saved.getId(), "Ordem criada para " + machine.getAssetCode() + ": " + saved.getTitle());
@@ -95,9 +97,7 @@ public class WorkOrderService {
     }
 
     private Incident resolveIncident(UUID incidentId, Machine machine) {
-        if (incidentId == null) {
-            return null;
-        }
+        if (incidentId == null) return null;
         Incident incident = incidentRepository.findById(incidentId)
                 .orElseThrow(() -> new NotFoundException("Incident not found"));
         if (!incident.getMachine().getId().equals(machine.getId())) {
