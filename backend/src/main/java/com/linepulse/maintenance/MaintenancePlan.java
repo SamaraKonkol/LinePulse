@@ -67,9 +67,11 @@ public class MaintenancePlan {
         this.updatedAt = at;
     }
 
-    public void markGenerated(Instant at) {
+    public void markGenerated(Instant at, LocalDate referenceDate) {
         this.lastGeneratedAt = at;
-        this.nextDueDate = this.nextDueDate.plusDays(intervalDays);
+        do {
+            this.nextDueDate = this.nextDueDate.plusDays(intervalDays);
+        } while (!this.nextDueDate.isAfter(referenceDate));
         this.updatedAt = at;
     }
 
