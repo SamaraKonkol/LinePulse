@@ -5,9 +5,13 @@ import com.linepulse.asset.MachineRepository;
 import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
+import com.linepulse.common.PageResponse;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +34,13 @@ public class IncidentService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<IncidentResponse> findPage(int page, int size) {
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        Page<Incident> result = incidentRepository.findAll(PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "createdAt")));
+        return PageResponse.from(result, result.getContent().stream().map(IncidentResponse::from).toList());
+    }
+
     @Transactional
     public IncidentResponse create(CreateIncidentRequest request) {
         Machine machine = machineRepository.findById(request.machineId())
@@ -40,6 +51,7 @@ public class IncidentService {
                 machine,
                 request.title().trim(),
                 request.description().trim(),
+                request.category(),
                 request.priority(),
                 IncidentStatus.OPEN,
                 request.occurredAt() == null ? now : request.occurredAt(),
@@ -64,15 +76,20 @@ public class IncidentService {
     }
 
     @Transactional
-    public IncidentResponse resolve(UUID id) {
+    public IncidentResponse resolve(UUID id, ResolveIncidentRequest request) {
         Incident incident = findIncident(id);
         if (!IncidentLifecycle.canResolve(incident.getStatus())) {
             throw new ConflictException("Only incidents in progress can be resolved");
         }
-        incident.resolve(Instant.now());
+        incident.resolve(request.rootCause().trim(), request.solution().trim(), Instant.now());
         Incident saved = incidentRepository.save(incident);
-        auditService.record("INCIDENT_RESOLVED", "INCIDENT", saved.getId(), "Ocorrência resolvida em " + saved.getMachine().getAssetCode());
+        auditService.record("INCIDENT_RESOLVED", "INCIDENT", saved.getId(), "Ocorrência resolvida em " + saved.getMachine().getAssetCode() + " · causa: " + saved.getRootCause());
         return IncidentResponse.from(saved);
+    }
+
+    @Transactional
+    public IncidentResponse resolve(UUID id) {
+        return resolve(id, new ResolveIncidentRequest("Não informado", "Não informado"));
     }
 
     @Transactional

@@ -33,6 +33,15 @@
   letter-spacing: -.025em;
 }
 
+.modal-context {
+  margin: -8px 0 18px;
+  padding: 10px 12px;
+  border-left: 3px solid #a56135;
+  background: #fff8f2;
+  color: #6f5a4a;
+  border-radius: 0 8px 8px 0;
+}
+
 .modal-close {
   border: 0;
   background: transparent;
@@ -42,69 +51,15 @@
   cursor: pointer;
 }
 
-.incident-form {
-  display: grid;
-  gap: 15px;
-}
-
-.incident-form label {
-  display: grid;
-  gap: 7px;
-  color: #344139;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.incident-form input,
-.incident-form select,
-.incident-form textarea {
-  width: 100%;
-  border: 1px solid #ccd7cf;
-  border-radius: 8px;
-  background: #fff;
-  padding: 11px 12px;
-  color: #17201b;
-  outline: none;
-  font: inherit;
-}
-
-.incident-form textarea {
-  resize: vertical;
-  min-height: 110px;
-}
-
-.incident-form input:focus,
-.incident-form select:focus,
-.incident-form textarea:focus {
-  border-color: #166534;
-  box-shadow: 0 0 0 3px #e5f3e8;
-}
-
-.form-grid-two {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 5px;
-}
-
-.secondary-button {
-  border: 1px solid #ccd7cf;
-  border-radius: 8px;
-  padding: 10px 15px;
-  background: #fff;
-  color: #344139;
-  cursor: pointer;
-}
-
-.secondary-button:hover {
-  background: #f5f8f6;
-}
+.incident-form { display: grid; gap: 15px; }
+.incident-form label { display: grid; gap: 7px; color: #344139; font-size: 13px; font-weight: 700; }
+.incident-form input, .incident-form select, .incident-form textarea { width: 100%; border: 1px solid #ccd7cf; border-radius: 8px; background: #fff; padding: 11px 12px; color: #17201b; outline: none; font: inherit; }
+.incident-form textarea { resize: vertical; min-height: 110px; }
+.incident-form input:focus, .incident-form select:focus, .incident-form textarea:focus { border-color: #166534; box-shadow: 0 0 0 3px #e5f3e8; }
+.form-grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 5px; }
+.secondary-button { border: 1px solid #ccd7cf; border-radius: 8px; padding: 10px 15px; background: #fff; color: #344139; cursor: pointer; }
+.secondary-button:hover { background: #f5f8f6; }
 
 @media (max-width: 640px) {
   .modal-backdrop { padding: 12px; }

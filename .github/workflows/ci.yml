@@ -34,9 +34,39 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run build
 
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
   docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - run: docker compose config
       - run: docker compose build
+      - name: Start PostgreSQL and API
+        run: docker compose up -d postgres backend
+      - name: Smoke test API health
+        run: |
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:8080/api/health > /dev/null; then
+              echo "LinePulse API is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs backend
+          exit 1
+      - name: Stop smoke-test stack
+        if: always()
+        run: docker compose down -v

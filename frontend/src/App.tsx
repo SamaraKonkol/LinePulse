@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Activity, AlertTriangle, Factory, LogOut, Repeat2, Timer, Wrench } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AdminPanel from './AdminPanel';
 import AlertPanel from './AlertPanel';
 import AuditPanel from './AuditPanel';
@@ -14,9 +14,11 @@ import MachineDetailPanel from './MachineDetailPanel';
 import MachinesPanel from './MachinesPanel';
 import MaintenanceHistoryPanel from './MaintenanceHistoryPanel';
 import OperationalInsightsPanel from './OperationalInsightsPanel';
+import PreventiveMaintenancePanel from './PreventiveMaintenancePanel';
+import ResolveIncidentModal from './ResolveIncidentModal';
 import WorkOrderModal from './WorkOrderModal';
 import { cancelIncident, clearAuth, closeDowntime, completeWorkOrder, createDowntime, createIncident, createWorkOrder, getAlerts, getAuditEvents, getDashboardMetrics, getDowntimes, getIncidents, getIncidentTrend, getMachines, getStoredAuth, getWorkOrders, resolveIncident, startIncident, startWorkOrder } from './services/api';
-import type { AuthResponse, IncidentPriority, Machine, WorkOrderPriority } from './types/api';
+import type { AuthResponse, Incident, IncidentPriority, Machine, ResolveIncidentInput, WorkOrderPriority } from './types/api';
 import { getApiErrorMessage } from './utils/apiError';
 
 const priorityMeta: Record<IncidentPriority | WorkOrderPriority, { label: string; className: string }> = {
@@ -38,6 +40,7 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
   const [showMaintenanceHistory, setShowMaintenanceHistory] = useState(false);
   const [showDowntimeModal, setShowDowntimeModal] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
+  const [incidentToResolve, setIncidentToResolve] = useState<Incident | null>(null);
   const isAdmin = auth.user.role === 'ADMIN';
   const canManageOperations = isAdmin || auth.user.role === 'TECHNICIAN';
   const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: getDashboardMetrics });
@@ -79,12 +82,15 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
     },
   });
   const incidentTransitionMutation = useMutation({
-    mutationFn: ({ id, action }: { id: string; action: 'start' | 'resolve' | 'cancel' }) => {
-      if (action === 'start') return startIncident(id);
-      if (action === 'resolve') return resolveIncident(id);
-      return cancelIncident(id);
-    },
+    mutationFn: ({ id, action }: { id: string; action: 'start' | 'cancel' }) => action === 'start' ? startIncident(id) : cancelIncident(id),
     onSuccess: refreshIncidents,
+  });
+  const resolveIncidentMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ResolveIncidentInput }) => resolveIncident(id, input),
+    onSuccess: async () => {
+      setIncidentToResolve(null);
+      await refreshIncidents();
+    },
   });
   const createWorkOrderMutation = useMutation({ mutationFn: createWorkOrder, onSuccess: async () => { setShowWorkOrderModal(false); await refreshDashboard(); } });
   const workOrderTransitionMutation = useMutation({ mutationFn: ({ id, action }: { id: string; action: 'start' | 'complete' }) => action === 'start' ? startWorkOrder(id) : completeWorkOrder(id), onSuccess: refreshDashboard });
@@ -101,12 +107,32 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  function openMachine(machine: Machine) {
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#machine=${machine.id}`);
+    setSelectedMachine(machine);
+  }
+
+  function closeMachine() {
+    if (window.location.hash.startsWith('#machine=')) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#machines`);
+    }
+    setSelectedMachine(null);
+  }
+
   const dashboard = dashboardQuery.data;
   const availability = dashboard?.availabilityPercentage ?? 0;
   const machines = machinesQuery.data ?? [];
   const incidents = incidentsQuery.data ?? [];
   const orders = workOrdersQuery.data ?? [];
   const downtimes = downtimesQuery.data ?? [];
+
+  useEffect(() => {
+    if (machines.length === 0 || !window.location.hash.startsWith('#machine=')) return;
+    const machineId = decodeURIComponent(window.location.hash.slice('#machine='.length));
+    const machine = machines.find((item) => item.id === machineId);
+    if (machine) setSelectedMachine(machine);
+  }, [machines]);
+
   const recentIncidents = incidents.filter((incident) => incident.status === 'OPEN' || incident.status === 'IN_PROGRESS').slice(0, 4);
   const recentWorkOrders = orders.filter((order) => order.status === 'OPEN' || order.status === 'IN_PROGRESS').slice(0, 5);
   const selectedMachineData = selectedMachine ? machines.find((machine) => machine.id === selectedMachine.id) ?? selectedMachine : null;
@@ -118,7 +144,7 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
     { label: 'MTTR · 30 dias', value: dashboard ? `${dashboard.mttrMinutes.toFixed(1)} min` : '—', icon: Timer, action: () => setShowMaintenanceHistory(true) },
   ];
   const connectionError = [dashboardQuery.error, trendQuery.error, alertsQuery.error, incidentsQuery.error, machinesQuery.error, workOrdersQuery.error, downtimesQuery.error, canManageOperations ? auditQuery.error : null].find(Boolean);
-  const mutationError = [createIncidentMutation.error, incidentTransitionMutation.error, createWorkOrderMutation.error, workOrderTransitionMutation.error, createDowntimeMutation.error, closeDowntimeMutation.error].find(Boolean);
+  const mutationError = [createIncidentMutation.error, incidentTransitionMutation.error, resolveIncidentMutation.error, createWorkOrderMutation.error, workOrderTransitionMutation.error, createDowntimeMutation.error, closeDowntimeMutation.error].find(Boolean);
 
   return (
     <main className="app-shell">
@@ -169,7 +195,7 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
             {recentIncidents.map((incident) => {
               const priority = priorityMeta[incident.priority];
               const machine = machines.find((item) => item.id === incident.machineId);
-              return <button type="button" className="incident-row incident-row-button" key={incident.id} onClick={() => machine && setSelectedMachine(machine)}><span className={`status-dot ${priority.className}`} /><div><strong>{incident.assetCode} · {incident.machineName}</strong><small>{incident.title}</small></div><span className={`badge ${priority.className}`}>{priority.label}</span></button>;
+              return <button type="button" className="incident-row incident-row-button" key={incident.id} onClick={() => machine && openMachine(machine)}><span className={`status-dot ${priority.className}`} /><div><strong>{incident.assetCode} · {incident.machineName}</strong><small>{incident.title}</small></div><span className={`badge ${priority.className}`}>{priority.label}</span></button>;
             })}
           </section>
 
@@ -180,11 +206,11 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
           </aside>
         </div>
 
-        {showIncidentHistory && <IncidentHistoryPanel incidents={incidents} canManage={canManageOperations} busy={incidentTransitionMutation.isPending} onClose={() => setShowIncidentHistory(false)} onTransition={(id, action) => incidentTransitionMutation.mutate({ id, action })} />}
+        {showIncidentHistory && <IncidentHistoryPanel incidents={incidents} canManage={canManageOperations} busy={incidentTransitionMutation.isPending || resolveIncidentMutation.isPending} onClose={() => setShowIncidentHistory(false)} onTransition={(id, action) => incidentTransitionMutation.mutate({ id, action })} onResolve={setIncidentToResolve} />}
 
         <DowntimePanel downtimes={downtimes} canManage={canManageOperations} closing={closeDowntimeMutation.isPending} onNew={() => setShowDowntimeModal(true)} onCloseDowntime={(id) => closeDowntimeMutation.mutate(id)} />
-        <MachinesPanel machines={machines} canManage={canManageOperations} isAdmin={isAdmin} onSelect={setSelectedMachine} />
-        <OperationalInsightsPanel machines={machines} incidents={incidents} orders={orders} downtimes={downtimes} onSelectMachine={setSelectedMachine} />
+        <MachinesPanel machines={machines} canManage={canManageOperations} isAdmin={isAdmin} onSelect={openMachine} />
+        <OperationalInsightsPanel machines={machines} incidents={incidents} orders={orders} downtimes={downtimes} onSelectMachine={openMachine} />
 
         <section className="panel maintenance-panel" id="maintenance">
           <div className="panel-heading">
@@ -198,7 +224,7 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
               const priority = priorityMeta[order.priority];
               return (
                 <article className="work-order-row" key={order.id}>
-                  <button type="button" className="work-order-copy work-order-machine-link" onClick={() => { const machine = machines.find((item) => item.id === order.machineId); if (machine) setSelectedMachine(machine); }}><strong>{order.assetCode} · {order.title}</strong><small>{maintenanceTypeLabel[order.type]} · {order.machineName}</small></button>
+                  <button type="button" className="work-order-copy work-order-machine-link" onClick={() => { const machine = machines.find((item) => item.id === order.machineId); if (machine) openMachine(machine); }}><strong>{order.assetCode} · {order.title}</strong><small>{maintenanceTypeLabel[order.type]} · {order.machineName}</small></button>
                   <div className="work-order-actions"><span className={`badge ${priority.className}`}>{priority.label}</span>{canManageOperations && order.status === 'OPEN' && <button className="order-action" disabled={workOrderTransitionMutation.isPending} onClick={() => workOrderTransitionMutation.mutate({ id: order.id, action: 'start' })}>Iniciar</button>}{canManageOperations && order.status === 'IN_PROGRESS' && <button className="order-action complete" disabled={workOrderTransitionMutation.isPending} onClick={() => workOrderTransitionMutation.mutate({ id: order.id, action: 'complete' })}>Concluir</button>}</div>
                 </article>
               );
@@ -206,15 +232,17 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
           </div>
         </section>
 
+        <PreventiveMaintenancePanel machines={machines} isAdmin={isAdmin} />
         {showMaintenanceHistory && <MaintenanceHistoryPanel orders={orders} onClose={() => setShowMaintenanceHistory(false)} />}
         {canManageOperations && <AuditPanel events={auditQuery.data ?? []} loading={auditQuery.isLoading} />}
         {isAdmin && <AdminPanel currentUserId={auth.user.id} machines={machines} />}
       </section>
 
       {showIncidentModal && <IncidentModal machines={machines.filter((machine) => machine.status !== 'INACTIVE')} loading={createIncidentMutation.isPending} onClose={() => setShowIncidentModal(false)} onSubmit={(draft) => createIncidentMutation.mutate(draft)} />}
+      {incidentToResolve && canManageOperations && <ResolveIncidentModal incident={incidentToResolve} loading={resolveIncidentMutation.isPending} onClose={() => setIncidentToResolve(null)} onSubmit={(input) => resolveIncidentMutation.mutate({ id: incidentToResolve.id, input })} />}
       {showWorkOrderModal && canManageOperations && <WorkOrderModal machines={machines.filter((machine) => machine.status !== 'INACTIVE')} loading={createWorkOrderMutation.isPending} onClose={() => setShowWorkOrderModal(false)} onSubmit={(draft) => createWorkOrderMutation.mutate(draft)} />}
       {showDowntimeModal && canManageOperations && <DowntimeModal machines={machines.filter((machine) => machine.status !== 'INACTIVE')} loading={createDowntimeMutation.isPending} onClose={() => setShowDowntimeModal(false)} onSubmit={(draft) => createDowntimeMutation.mutate(draft)} />}
-      {selectedMachineData && <MachineDetailPanel machine={selectedMachineData} incidents={incidents} orders={orders} downtimes={downtimes} onClose={() => setSelectedMachine(null)} />}
+      {selectedMachineData && <MachineDetailPanel machine={selectedMachineData} incidents={incidents} orders={orders} downtimes={downtimes} onClose={closeMachine} />}
     </main>
   );
 }

@@ -18,7 +18,7 @@
 .admin-user-copy small { width: fit-content; padding: 2px 7px; border-radius: 999px; background: #edf5ef; color: #39724e; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .admin-icon-button { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #dfc8b6; border-radius: 9px; background: #fffaf6; color: #9a572a; cursor: pointer; }
 .admin-icon-button:hover { background: #f6e8dc; }
-.admin-user-row select, .admin-filters select, .admin-filters input, .structure-form input, .structure-form select { border: 1px solid #d7e1da; border-radius: 8px; padding: 8px 9px; background: #fff; color: #334139; font: inherit; }
+.admin-user-row select, .admin-filters select, .admin-filters input, .structure-form input, .structure-form select, .structure-edit input, .structure-edit select { border: 1px solid #d7e1da; border-radius: 8px; padding: 8px 9px; background: #fff; color: #334139; font: inherit; }
 .admin-user-row select { max-width: 145px; }
 .admin-status-button { min-width: 72px; border-radius: 999px; border: 1px solid #d7e1da; padding: 7px 10px; font-size: 12px; font-weight: 700; cursor: pointer; background: #f7faf8; color: #3d5547; }
 .admin-status-button.active { background: #edf7ef; border-color: #c5e1cb; color: #327246; }
@@ -33,29 +33,25 @@
 .structure-title { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #355642; }
 .structure-form { display: grid; gap: 8px; margin-bottom: 12px; }
 .structure-form-row { display: grid; grid-template-columns: 1fr auto; gap: 7px; }
-.structure-list { display: grid; gap: 7px; max-height: 250px; overflow: auto; }
+.structure-list { display: grid; gap: 7px; max-height: 310px; overflow: auto; }
 .structure-item { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid #e4eae6; border-radius: 8px; background: #fff; }
 .structure-item.inactive { opacity: .55; }
 .structure-item span { min-width: 0; display: grid; gap: 2px; flex: 1; font-size: 11px; color: #6b766f; }
 .structure-item strong { font-size: 12px; color: #29382f; }
 .structure-item button { border: 0; background: transparent; color: #8f552d; font-size: 11px; font-weight: 700; cursor: pointer; }
+.structure-actions { display: flex; align-items: center; gap: 5px; }
+.structure-edit-button { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 7px !important; background: #fff8f2 !important; border: 1px solid #ead3bf !important; }
+.structure-edit { display: grid; gap: 6px; padding: 10px; border: 1px solid #d9e4dc; border-radius: 9px; background: #f8fbf9; }
+.structure-edit > div { display: flex; justify-content: flex-end; gap: 6px; }
+.structure-edit > div button { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid #d7e1da; border-radius: 7px; background: #fff; color: #355642; cursor: pointer; }
 .confirm-dialog { max-width: 460px; }
 .confirm-dialog-copy { margin: 0 0 20px; color: #66736b; line-height: 1.6; }
 .danger-button { border: 1px solid #b84035; border-radius: 9px; padding: 10px 16px; background: #b84035; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 .danger-button:disabled { opacity: .55; cursor: wait; }
 
-@media (max-width: 1100px) {
-  .admin-grid, .structure-grid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 980px) {
-  .sidebar nav:has(.admin-nav-item) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-}
-
-@media (max-width: 760px) {
-  .admin-filters { grid-template-columns: 1fr; }
-}
-
+@media (max-width: 1100px) { .admin-grid, .structure-grid { grid-template-columns: 1fr; } }
+@media (max-width: 980px) { .sidebar nav:has(.admin-nav-item) { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .admin-filters { grid-template-columns: 1fr; } }
 @media (max-width: 680px) {
   .admin-machine-row, .admin-user-row { align-items: stretch; flex-direction: column; }
   .admin-user-row select, .admin-status-button { max-width: none; width: 100%; }

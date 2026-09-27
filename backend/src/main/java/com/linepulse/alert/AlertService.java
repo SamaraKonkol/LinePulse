@@ -6,12 +6,16 @@ import com.linepulse.incident.IncidentPriority;
 import com.linepulse.incident.IncidentResponse;
 import com.linepulse.incident.IncidentService;
 import com.linepulse.incident.IncidentStatus;
+import com.linepulse.maintenance.MaintenancePlanResponse;
+import com.linepulse.maintenance.MaintenancePlanService;
 import com.linepulse.maintenance.WorkOrderPriority;
 import com.linepulse.maintenance.WorkOrderResponse;
 import com.linepulse.maintenance.WorkOrderService;
 import com.linepulse.maintenance.WorkOrderStatus;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -23,16 +27,19 @@ public class AlertService {
     private final IncidentService incidentService;
     private final WorkOrderService workOrderService;
     private final DowntimeService downtimeService;
+    private final MaintenancePlanService maintenancePlanService;
 
-    public AlertService(IncidentService incidentService, WorkOrderService workOrderService, DowntimeService downtimeService) {
+    public AlertService(IncidentService incidentService, WorkOrderService workOrderService, DowntimeService downtimeService, MaintenancePlanService maintenancePlanService) {
         this.incidentService = incidentService;
         this.workOrderService = workOrderService;
         this.downtimeService = downtimeService;
+        this.maintenancePlanService = maintenancePlanService;
     }
 
     @Transactional(readOnly = true)
     public List<OperationalAlert> findActive() {
         Instant now = Instant.now();
+        LocalDate today = LocalDate.now();
         List<OperationalAlert> alerts = new ArrayList<>();
 
         incidentService.findAll().stream()
@@ -49,6 +56,10 @@ public class AlertService {
         workOrderService.findAll().stream()
                 .filter(this::isCriticalActiveWorkOrder)
                 .map(this::criticalWorkOrderAlert)
+                .forEach(alerts::add);
+
+        maintenancePlanService.findDueThrough(today.plusDays(7)).stream()
+                .map(plan -> preventiveAlert(plan, today))
                 .forEach(alerts::add);
 
         alerts.sort(Comparator
@@ -102,6 +113,21 @@ public class AlertService {
                 "WORK_ORDER",
                 order.id(),
                 order.createdAt()
+        );
+    }
+
+    private OperationalAlert preventiveAlert(MaintenancePlanResponse plan, LocalDate today) {
+        boolean overdue = plan.nextDueDate().isBefore(today);
+        boolean dueToday = plan.nextDueDate().isEqual(today);
+        String timing = overdue ? "vencida em " + plan.nextDueDate() : dueToday ? "vence hoje" : "vence em " + plan.nextDueDate();
+        return new OperationalAlert(
+                "MAINTENANCE_PLAN:" + plan.id(),
+                overdue ? AlertSeverity.CRITICAL : AlertSeverity.WARNING,
+                overdue ? "Preventiva vencida" : "Preventiva próxima",
+                plan.assetCode() + " · " + plan.machineName() + " — " + plan.title() + " · " + timing,
+                "MAINTENANCE_PLAN",
+                plan.id(),
+                plan.nextDueDate().atStartOfDay().toInstant(ZoneOffset.UTC)
         );
     }
 
