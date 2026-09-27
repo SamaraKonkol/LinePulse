@@ -5,9 +5,13 @@ import com.linepulse.asset.MachineRepository;
 import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
+import com.linepulse.common.PageResponse;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +32,13 @@ public class IncidentService {
         return incidentRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(IncidentResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<IncidentResponse> findPage(int page, int size) {
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        Page<Incident> result = incidentRepository.findAll(PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "createdAt")));
+        return PageResponse.from(result, result.getContent().stream().map(IncidentResponse::from).toList());
     }
 
     @Transactional
