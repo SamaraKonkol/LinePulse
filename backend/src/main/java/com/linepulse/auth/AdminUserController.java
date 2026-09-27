@@ -31,8 +31,8 @@ public class AdminUserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    AdminUserResponse create(@Valid @RequestBody AdminCreateUserRequest request) {
-        return adminUserService.create(request);
+    AdminUserResponse create(@Valid @RequestBody AdminCreateUserRequest request, Principal principal) {
+        return adminUserService.create(request, principal.getName());
     }
 
     @PatchMapping("/{userId}/role")
