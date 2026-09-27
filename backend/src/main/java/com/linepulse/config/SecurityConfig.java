@@ -1,6 +1,7 @@
 package com.linepulse.config;
 
 import com.linepulse.auth.JwtAuthenticationFilter;
+import com.linepulse.organization.OrganizationAuthorityFilter;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +22,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            OrganizationAuthorityFilter organizationAuthorityFilter
+    ) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
@@ -43,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/work-orders/**", "/api/downtimes/**").hasAnyRole("TECHNICIAN", "ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(organizationAuthorityFilter, JwtAuthenticationFilter.class)
                 .build();
     }
 

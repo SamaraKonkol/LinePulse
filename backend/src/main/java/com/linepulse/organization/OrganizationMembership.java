@@ -45,23 +45,17 @@ public class OrganizationMembership {
         this.createdAt = createdAt;
     }
 
-    public Long getId() {
-        return id;
+    public void changeRole(OrganizationRole role) {
+        this.role = role;
     }
 
-    public Organization getOrganization() {
-        return organization;
+    public void changeActive(boolean active) {
+        this.active = active;
     }
 
-    public UserAccount getUser() {
-        return user;
-    }
-
-    public OrganizationRole getRole() {
-        return role;
-    }
-
-    public boolean isActive() {
-        return active;
-    }
+    public Long getId() { return id; }
+    public Organization getOrganization() { return organization; }
+    public UserAccount getUser() { return user; }
+    public OrganizationRole getRole() { return role; }
+    public boolean isActive() { return active; }
 }

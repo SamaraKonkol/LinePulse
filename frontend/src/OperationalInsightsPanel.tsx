@@ -1,4 +1,5 @@
 import { BarChart3, Gauge, TriangleAlert } from 'lucide-react';
+import ServiceNetworkPanel from './ServiceNetworkPanel';
 import type { Downtime, Incident, Machine, WorkOrder } from './types/api';
 import './operational-insights.css';
 
@@ -55,32 +56,35 @@ function OperationalInsightsPanel({ machines, incidents, orders, downtimes, onSe
   const totalDowntime = Object.values(downtimeSummary).reduce((sum, item) => sum + item.minutes, 0);
 
   return (
-    <section className="panel insights-panel" id="insights">
-      <div className="panel-heading">
-        <div><span className="eyebrow">Análise operacional</span><h2>Indicadores por linha e ativo</h2></div>
-        <BarChart3 size={20} />
-      </div>
-
-      <div className="insight-summary">
-        <article><Gauge size={18} /><span>Linhas monitoradas</span><strong>{lines.length}</strong></article>
-        <article><TriangleAlert size={18} /><span>Ativos com ocorrência aberta</span><strong>{machineRisk.filter((item) => item.open > 0).length}</strong></article>
-        <article><span>Downtime acumulado · 24h</span><strong>{totalDowntime.toFixed(0)} min</strong></article>
-      </div>
-
-      <div className="insights-grid">
-        <div>
-          <h3>Disponibilidade por linha</h3>
-          {lines.length === 0 && <div className="empty-state">Sem linhas ativas para analisar.</div>}
-          <div className="line-insights">{lines.map((line) => <article key={line.lineName}><div><strong>{line.lineName}</strong><small>{line.plant} · {line.sector} · {line.machines} ativos</small></div><div className="line-availability"><span>{line.availability.toFixed(1)}%</span><div><i style={{ width: `${Math.max(0, Math.min(100, line.availability))}%` }} /></div><small>{line.openIncidents} ocorrências abertas · {line.downtimeMinutes.toFixed(0)} min downtime</small></div></article>)}</div>
+    <>
+      <ServiceNetworkPanel machines={machines} incidents={incidents} />
+      <section className="panel insights-panel" id="insights">
+        <div className="panel-heading">
+          <div><span className="eyebrow">Análise operacional</span><h2>Indicadores por linha e ativo</h2></div>
+          <BarChart3 size={20} />
         </div>
 
-        <div>
-          <h3>Ativos que pedem atenção</h3>
-          {machineRisk.length === 0 && <div className="empty-state">Sem ativos ativos para analisar.</div>}
-          <div className="risk-list">{machineRisk.slice(0, 6).map((item) => <button type="button" key={item.machine.id} onClick={() => onSelectMachine(item.machine)}><span><strong>{item.machine.assetCode} · {item.machine.name}</strong><small>{item.machine.productionLine}</small></span><span className="risk-data"><b>{item.open} falhas</b><small>{item.downtimeMinutes.toFixed(0)} min downtime</small></span></button>)}</div>
+        <div className="insight-summary">
+          <article><Gauge size={18} /><span>Linhas monitoradas</span><strong>{lines.length}</strong></article>
+          <article><TriangleAlert size={18} /><span>Ativos com ocorrência aberta</span><strong>{machineRisk.filter((item) => item.open > 0).length}</strong></article>
+          <article><span>Downtime acumulado · 24h</span><strong>{totalDowntime.toFixed(0)} min</strong></article>
         </div>
-      </div>
-    </section>
+
+        <div className="insights-grid">
+          <div>
+            <h3>Disponibilidade por linha</h3>
+            {lines.length === 0 && <div className="empty-state">Sem linhas ativas para analisar.</div>}
+            <div className="line-insights">{lines.map((line) => <article key={line.lineName}><div><strong>{line.lineName}</strong><small>{line.plant} · {line.sector} · {line.machines} ativos</small></div><div className="line-availability"><span>{line.availability.toFixed(1)}%</span><div><i style={{ width: `${Math.max(0, Math.min(100, line.availability))}%` }} /></div><small>{line.openIncidents} ocorrências abertas · {line.downtimeMinutes.toFixed(0)} min downtime</small></div></article>)}</div>
+          </div>
+
+          <div>
+            <h3>Ativos que pedem atenção</h3>
+            {machineRisk.length === 0 && <div className="empty-state">Sem ativos ativos para analisar.</div>}
+            <div className="risk-list">{machineRisk.slice(0, 6).map((item) => <button type="button" key={item.machine.id} onClick={() => onSelectMachine(item.machine)}><span><strong>{item.machine.assetCode} · {item.machine.name}</strong><small>{item.machine.productionLine}</small></span><span className="risk-data"><b>{item.open} falhas</b><small>{item.downtimeMinutes.toFixed(0)} min downtime</small></span></button>)}</div>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
 

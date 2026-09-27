@@ -3,6 +3,7 @@ import type { AdminUser, AuditEvent, AuthResponse, CreateDowntimeInput, CreateIn
 
 const AUTH_STORAGE_KEY = 'linepulse-auth-v2';
 const LEGACY_AUTH_STORAGE_KEY = 'linepulse-auth';
+const ACTIVE_ORGANIZATION_STORAGE_KEY = 'linepulse-active-organization-v3';
 const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:8080/api';
 
 const api = axios.create({
@@ -13,6 +14,8 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const session = getStoredAuth();
   if (session?.token) config.headers.Authorization = `Bearer ${session.token}`;
+  const organizationId = localStorage.getItem(ACTIVE_ORGANIZATION_STORAGE_KEY);
+  if (organizationId) config.headers['X-LinePulse-Organization'] = organizationId;
   return config;
 });
 
@@ -23,8 +26,8 @@ export function getStoredAuth(): AuthResponse | null {
   try { return JSON.parse(raw) as AuthResponse; } catch { localStorage.removeItem(AUTH_STORAGE_KEY); return null; }
 }
 
-export function storeAuth(auth: AuthResponse) { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth)); }
-export function clearAuth() { localStorage.removeItem(AUTH_STORAGE_KEY); localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY); }
+export function storeAuth(auth: AuthResponse) { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth)); localStorage.removeItem(ACTIVE_ORGANIZATION_STORAGE_KEY); }
+export function clearAuth() { localStorage.removeItem(AUTH_STORAGE_KEY); localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY); localStorage.removeItem(ACTIVE_ORGANIZATION_STORAGE_KEY); }
 
 export async function login(registration: string, password: string) { return (await api.post<AuthResponse>('/auth/login', { registration, password })).data; }
 export async function getDashboardMetrics() { return (await api.get<DashboardMetrics>('/dashboard')).data; }

@@ -1,6 +1,8 @@
 package com.linepulse.audit;
 
 import com.linepulse.common.PageResponse;
+import com.linepulse.organization.Organization;
+import com.linepulse.organization.OrganizationService;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -15,34 +17,46 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuditService {
     private final AuditEventRepository auditEventRepository;
+    private final OrganizationService organizationService;
 
-    public AuditService(AuditEventRepository auditEventRepository) {
+    public AuditService(AuditEventRepository auditEventRepository, OrganizationService organizationService) {
         this.auditEventRepository = auditEventRepository;
+        this.organizationService = organizationService;
     }
 
     @Transactional
     public void record(String action, String entityType, UUID entityId, String description) {
+        recordForOrganization(organizationService.currentOrganization(), action, entityType, entityId, description);
+    }
+
+    @Transactional
+    public void recordForOrganization(Organization organization, String action, String entityType, UUID entityId, String description) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String actorRegistration = authentication != null && authentication.isAuthenticated()
                 ? authentication.getName()
                 : "SYSTEM";
         AuditEvent event = new AuditEvent(
-                UUID.randomUUID(), action, entityType, entityId, description, actorRegistration, Instant.now()
+                UUID.randomUUID(), organization, action, entityType, entityId, description, actorRegistration, Instant.now()
         );
         auditEventRepository.save(event);
     }
 
     @Transactional(readOnly = true)
     public List<AuditEventResponse> findRecent() {
-        return auditEventRepository.findTop50ByOrderByCreatedAtDesc().stream()
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return auditEventRepository.findTop50ByOrganization_IdOrderByCreatedAtDesc(organizationId).stream()
                 .map(AuditEventResponse::from)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public PageResponse<AuditEventResponse> findPage(int page, int size) {
+        UUID organizationId = organizationService.currentOrganization().getId();
         int safeSize = Math.min(Math.max(size, 1), 100);
-        Page<AuditEvent> result = auditEventRepository.findAll(PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "createdAt")));
+        Page<AuditEvent> result = auditEventRepository.findByOrganization_Id(
+                organizationId,
+                PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
         return PageResponse.from(result, result.getContent().stream().map(AuditEventResponse::from).toList());
     }
 }
