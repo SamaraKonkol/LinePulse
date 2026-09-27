@@ -6,6 +6,7 @@ import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
 import com.linepulse.common.PageResponse;
+import com.linepulse.organization.OrganizationService;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -20,30 +21,38 @@ public class IncidentService {
     private final IncidentRepository incidentRepository;
     private final MachineRepository machineRepository;
     private final AuditService auditService;
+    private final OrganizationService organizationService;
 
-    public IncidentService(IncidentRepository incidentRepository, MachineRepository machineRepository, AuditService auditService) {
+    public IncidentService(IncidentRepository incidentRepository, MachineRepository machineRepository, AuditService auditService, OrganizationService organizationService) {
         this.incidentRepository = incidentRepository;
         this.machineRepository = machineRepository;
         this.auditService = auditService;
+        this.organizationService = organizationService;
     }
 
     @Transactional(readOnly = true)
     public List<IncidentResponse> findAll() {
-        return incidentRepository.findAllByOrderByCreatedAtDesc().stream()
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return incidentRepository.findAllByMachine_ProductionLine_Sector_Plant_Organization_IdOrderByCreatedAtDesc(organizationId).stream()
                 .map(IncidentResponse::from)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public PageResponse<IncidentResponse> findPage(int page, int size) {
+        UUID organizationId = organizationService.currentOrganization().getId();
         int safeSize = Math.min(Math.max(size, 1), 100);
-        Page<Incident> result = incidentRepository.findAll(PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "createdAt")));
+        Page<Incident> result = incidentRepository.findAllByMachine_ProductionLine_Sector_Plant_Organization_Id(
+                organizationId,
+                PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
         return PageResponse.from(result, result.getContent().stream().map(IncidentResponse::from).toList());
     }
 
     @Transactional
     public IncidentResponse create(CreateIncidentRequest request) {
-        Machine machine = machineRepository.findById(request.machineId())
+        UUID organizationId = organizationService.currentOrganization().getId();
+        Machine machine = machineRepository.findByIdAndProductionLine_Sector_Plant_Organization_Id(request.machineId(), organizationId)
                 .orElseThrow(() -> new NotFoundException("Machine not found"));
         Instant now = Instant.now();
         Incident incident = new Incident(
@@ -105,7 +114,8 @@ public class IncidentService {
     }
 
     private Incident findIncident(UUID id) {
-        return incidentRepository.findById(id)
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return incidentRepository.findByIdAndMachine_ProductionLine_Sector_Plant_Organization_Id(id, organizationId)
                 .orElseThrow(() -> new NotFoundException("Incident not found"));
     }
 }
