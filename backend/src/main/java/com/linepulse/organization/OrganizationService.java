@@ -32,9 +32,8 @@ public class OrganizationService {
         if (!membershipRepository.findByUser_RegistrationIgnoreCaseAndActiveTrueOrderByOrganization_NameAsc(user.getRegistration()).isEmpty()) {
             return;
         }
-        Organization organization = defaultOrganization();
         membershipRepository.save(new OrganizationMembership(
-                organization,
+                defaultOrganization(),
                 user,
                 mapRole(user.getRole()),
                 true,
@@ -44,14 +43,11 @@ public class OrganizationService {
 
     @Transactional
     public void inheritPrimaryOrganization(String actorRegistration, UserAccount newUser) {
-        OrganizationMembership actorMembership = membershipRepository
+        Organization organization = membershipRepository
                 .findFirstByUser_RegistrationIgnoreCaseAndActiveTrueOrderByCreatedAtAsc(actorRegistration)
-                .orElseGet(() -> {
-                    Organization defaultOrganization = defaultOrganization();
-                    return new OrganizationMembership(defaultOrganization, newUser, mapRole(newUser.getRole()), true, Instant.now());
-                });
+                .map(OrganizationMembership::getOrganization)
+                .orElseGet(this::defaultOrganization);
 
-        Organization organization = actorMembership.getOrganization();
         if (!membershipRepository.existsByOrganization_IdAndUser_Id(organization.getId(), newUser.getId())) {
             membershipRepository.save(new OrganizationMembership(
                     organization,
