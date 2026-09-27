@@ -25,6 +25,11 @@ public class ServiceRelationshipController {
         return relationshipService.availableProviders();
     }
 
+    @PostMapping("/providers")
+    ProviderOnboardingResponse onboardProvider(@Valid @RequestBody CreateProviderOrganizationRequest request) {
+        return relationshipService.onboardProvider(request);
+    }
+
     @GetMapping("/relationships")
     List<ServiceRelationshipResponse> relationships() {
         return relationshipService.trustedProviders();
