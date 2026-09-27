@@ -3,6 +3,7 @@ package com.linepulse.asset;
 import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
+import com.linepulse.organization.OrganizationService;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -17,16 +18,19 @@ public class MachineService {
     private final MachineRepository machineRepository;
     private final ProductionLineRepository productionLineRepository;
     private final AuditService auditService;
+    private final OrganizationService organizationService;
 
-    public MachineService(MachineRepository machineRepository, ProductionLineRepository productionLineRepository, AuditService auditService) {
+    public MachineService(MachineRepository machineRepository, ProductionLineRepository productionLineRepository, AuditService auditService, OrganizationService organizationService) {
         this.machineRepository = machineRepository;
         this.productionLineRepository = productionLineRepository;
         this.auditService = auditService;
+        this.organizationService = organizationService;
     }
 
     @Transactional(readOnly = true)
     public List<MachineResponse> findAll() {
-        return machineRepository.findAll().stream()
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return machineRepository.findAllByProductionLine_Sector_Plant_Organization_Id(organizationId).stream()
                 .sorted(Comparator.comparing(Machine::getAssetCode, String.CASE_INSENSITIVE_ORDER))
                 .map(MachineResponse::from)
                 .toList();
@@ -34,12 +38,13 @@ public class MachineService {
 
     @Transactional
     public MachineResponse create(CreateMachineRequest request) {
+        UUID organizationId = organizationService.currentOrganization().getId();
         String assetCode = request.assetCode().trim().toUpperCase();
-        if (machineRepository.existsByAssetCodeIgnoreCase(assetCode)) {
-            throw new ConflictException("Código de ativo já cadastrado.");
+        if (machineRepository.existsByProductionLine_Sector_Plant_Organization_IdAndAssetCodeIgnoreCase(organizationId, assetCode)) {
+            throw new ConflictException("Código de ativo já cadastrado nesta organização.");
         }
 
-        ProductionLine line = findAvailableProductionLine(request.productionLineId());
+        ProductionLine line = findAvailableProductionLine(request.productionLineId(), organizationId);
         Instant now = Instant.now();
         Machine machine = new Machine(
                 UUID.randomUUID(),
@@ -61,13 +66,14 @@ public class MachineService {
 
     @Transactional
     public MachineResponse update(UUID machineId, UpdateMachineRequest request) {
-        Machine machine = findMachine(machineId);
+        UUID organizationId = organizationService.currentOrganization().getId();
+        Machine machine = findMachine(machineId, organizationId);
         String assetCode = request.assetCode().trim().toUpperCase();
-        if (machineRepository.existsByAssetCodeIgnoreCaseAndIdNot(assetCode, machineId)) {
-            throw new ConflictException("Código de ativo já cadastrado.");
+        if (machineRepository.existsByProductionLine_Sector_Plant_Organization_IdAndAssetCodeIgnoreCaseAndIdNot(organizationId, assetCode, machineId)) {
+            throw new ConflictException("Código de ativo já cadastrado nesta organização.");
         }
 
-        ProductionLine line = findAvailableProductionLine(request.productionLineId());
+        ProductionLine line = findAvailableProductionLine(request.productionLineId(), organizationId);
         machine.updateDetails(
                 line,
                 request.name().trim(),
@@ -83,7 +89,8 @@ public class MachineService {
 
     @Transactional
     public MachineResponse updateStatus(UUID machineId, UpdateMachineStatusRequest request) {
-        Machine machine = findMachine(machineId);
+        UUID organizationId = organizationService.currentOrganization().getId();
+        Machine machine = findMachine(machineId, organizationId);
         boolean lifecycleChange = request.status() == MachineStatus.INACTIVE || machine.getStatus() == MachineStatus.INACTIVE;
         if (lifecycleChange && !currentUserIsAdmin()) {
             throw new AccessDeniedException("Somente administradores podem desativar ou reativar máquinas.");
@@ -93,13 +100,13 @@ public class MachineService {
         return MachineResponse.from(machine);
     }
 
-    private Machine findMachine(UUID machineId) {
-        return machineRepository.findById(machineId)
+    private Machine findMachine(UUID machineId, UUID organizationId) {
+        return machineRepository.findByIdAndProductionLine_Sector_Plant_Organization_Id(machineId, organizationId)
                 .orElseThrow(() -> new NotFoundException("Máquina não encontrada."));
     }
 
-    private ProductionLine findAvailableProductionLine(UUID productionLineId) {
-        ProductionLine line = productionLineRepository.findById(productionLineId)
+    private ProductionLine findAvailableProductionLine(UUID productionLineId, UUID organizationId) {
+        ProductionLine line = productionLineRepository.findByIdAndSector_Plant_Organization_Id(productionLineId, organizationId)
                 .orElseThrow(() -> new NotFoundException("Linha de produção não encontrada."));
         if (!line.isActive() || !line.getSector().isActive() || !line.getSector().getPlant().isActive()) {
             throw new ConflictException("A planta, o setor e a linha precisam estar ativos para receber máquinas.");
