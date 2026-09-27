@@ -3,6 +3,7 @@ package com.linepulse.auth;
 import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.common.NotFoundException;
+import com.linepulse.organization.OrganizationService;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -20,11 +21,13 @@ public class AdminUserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final OrganizationService organizationService;
 
-    public AdminUserService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuditService auditService) {
+    public AdminUserService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuditService auditService, OrganizationService organizationService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditService = auditService;
+        this.organizationService = organizationService;
     }
 
     @Transactional(readOnly = true)
@@ -36,7 +39,7 @@ public class AdminUserService {
     }
 
     @Transactional
-    public AdminUserResponse create(AdminCreateUserRequest request) {
+    public AdminUserResponse create(AdminCreateUserRequest request, String actorRegistration) {
         String registration = normalizeRegistration(request.registration());
         if (userRepository.existsByRegistrationIgnoreCase(registration)) {
             throw new ConflictException("Este cadastro de funcionário já está em uso.");
@@ -53,6 +56,7 @@ public class AdminUserService {
                 now,
                 now
         ));
+        organizationService.inheritPrimaryOrganization(actorRegistration, saved);
         auditService.record("USER_CREATED", "USER", saved.getId(), "Usuário " + saved.getRegistration() + " criado como " + saved.getRole());
         return AdminUserResponse.from(saved);
     }
