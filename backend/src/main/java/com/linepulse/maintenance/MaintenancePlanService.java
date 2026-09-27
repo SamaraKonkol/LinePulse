@@ -4,6 +4,7 @@ import com.linepulse.asset.Machine;
 import com.linepulse.asset.MachineRepository;
 import com.linepulse.audit.AuditService;
 import com.linepulse.common.NotFoundException;
+import com.linepulse.organization.Organization;
 import com.linepulse.organization.OrganizationService;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -61,7 +62,7 @@ public class MaintenancePlanService {
                 now,
                 now
         ));
-        auditService.record("MAINTENANCE_PLAN_CREATED", "MAINTENANCE_PLAN", saved.getId(), "Plano preventivo criado para " + machine.getAssetCode() + ": " + saved.getTitle());
+        auditService.recordForOrganization(machineOrganization(machine), "MAINTENANCE_PLAN_CREATED", "MAINTENANCE_PLAN", saved.getId(), "Plano preventivo criado para " + machine.getAssetCode() + ": " + saved.getTitle());
         return MaintenancePlanResponse.from(saved);
     }
 
@@ -70,7 +71,7 @@ public class MaintenancePlanService {
         MaintenancePlan plan = findPlan(id);
         Machine machine = findMachine(request.machineId());
         plan.update(machine, request.title().trim(), request.description().trim(), request.intervalDays(), request.nextDueDate(), request.priority(), Instant.now());
-        auditService.record("MAINTENANCE_PLAN_UPDATED", "MAINTENANCE_PLAN", plan.getId(), "Plano preventivo atualizado para " + machine.getAssetCode() + ": " + plan.getTitle());
+        auditService.recordForOrganization(machineOrganization(machine), "MAINTENANCE_PLAN_UPDATED", "MAINTENANCE_PLAN", plan.getId(), "Plano preventivo atualizado para " + machine.getAssetCode() + ": " + plan.getTitle());
         return MaintenancePlanResponse.from(plan);
     }
 
@@ -78,7 +79,7 @@ public class MaintenancePlanService {
     public MaintenancePlanResponse changeStatus(UUID id, boolean active) {
         MaintenancePlan plan = findPlan(id);
         plan.changeActive(active, Instant.now());
-        auditService.record("MAINTENANCE_PLAN_STATUS_CHANGED", "MAINTENANCE_PLAN", plan.getId(), "Plano preventivo " + (active ? "ativado" : "desativado") + " para " + plan.getMachine().getAssetCode());
+        auditService.recordForOrganization(machineOrganization(plan.getMachine()), "MAINTENANCE_PLAN_STATUS_CHANGED", "MAINTENANCE_PLAN", plan.getId(), "Plano preventivo " + (active ? "ativado" : "desativado") + " para " + plan.getMachine().getAssetCode());
         return MaintenancePlanResponse.from(plan);
     }
 
@@ -100,7 +101,7 @@ public class MaintenancePlanService {
         workOrderService.createPreventive(plan.getMachine(), plan.getTitle(), plan.getDescription(), plan.getPriority(), scheduledFor);
         Instant now = Instant.now();
         plan.markGenerated(now, referenceDate);
-        auditService.record("MAINTENANCE_PLAN_GENERATED", "MAINTENANCE_PLAN", plan.getId(), "Preventiva gerada para " + plan.getMachine().getAssetCode() + "; próxima em " + plan.getNextDueDate());
+        auditService.recordForOrganization(machineOrganization(plan.getMachine()), "MAINTENANCE_PLAN_GENERATED", "MAINTENANCE_PLAN", plan.getId(), "Preventiva gerada para " + plan.getMachine().getAssetCode() + "; próxima em " + plan.getNextDueDate());
         return MaintenancePlanResponse.from(plan);
     }
 
@@ -114,5 +115,9 @@ public class MaintenancePlanService {
         UUID organizationId = organizationService.currentOrganization().getId();
         return machineRepository.findByIdAndProductionLine_Sector_Plant_Organization_Id(id, organizationId)
                 .orElseThrow(() -> new NotFoundException("Machine not found"));
+    }
+
+    private Organization machineOrganization(Machine machine) {
+        return machine.getProductionLine().getSector().getPlant().getOrganization();
     }
 }

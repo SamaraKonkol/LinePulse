@@ -8,6 +8,7 @@ import com.linepulse.common.NotFoundException;
 import com.linepulse.common.PageResponse;
 import com.linepulse.incident.Incident;
 import com.linepulse.incident.IncidentRepository;
+import com.linepulse.organization.Organization;
 import com.linepulse.organization.OrganizationService;
 import java.time.Instant;
 import java.util.List;
@@ -74,7 +75,7 @@ public class WorkOrderService {
                 WorkOrderStatus.OPEN, scheduledFor, now, now
         );
         WorkOrder saved = workOrderRepository.save(workOrder);
-        auditService.record(auditAction, "WORK_ORDER", saved.getId(), "Ordem criada para " + machine.getAssetCode() + ": " + saved.getTitle());
+        auditService.recordForOrganization(machineOrganization(machine), auditAction, "WORK_ORDER", saved.getId(), "Ordem criada para " + machine.getAssetCode() + ": " + saved.getTitle());
         return WorkOrderResponse.from(saved);
     }
 
@@ -85,7 +86,7 @@ public class WorkOrderService {
             throw new ConflictException("Only open work orders can be started");
         }
         workOrder.start(Instant.now());
-        auditService.record("WORK_ORDER_STARTED", "WORK_ORDER", workOrder.getId(), "Ordem iniciada em " + workOrder.getMachine().getAssetCode());
+        auditService.recordForOrganization(machineOrganization(workOrder.getMachine()), "WORK_ORDER_STARTED", "WORK_ORDER", workOrder.getId(), "Ordem iniciada em " + workOrder.getMachine().getAssetCode());
         return WorkOrderResponse.from(workOrder);
     }
 
@@ -96,7 +97,7 @@ public class WorkOrderService {
             throw new ConflictException("Only work orders in progress can be completed");
         }
         workOrder.complete(Instant.now());
-        auditService.record("WORK_ORDER_COMPLETED", "WORK_ORDER", workOrder.getId(), "Ordem concluída em " + workOrder.getMachine().getAssetCode());
+        auditService.recordForOrganization(machineOrganization(workOrder.getMachine()), "WORK_ORDER_COMPLETED", "WORK_ORDER", workOrder.getId(), "Ordem concluída em " + workOrder.getMachine().getAssetCode());
         return WorkOrderResponse.from(workOrder);
     }
 
@@ -114,5 +115,9 @@ public class WorkOrderService {
             throw new IllegalArgumentException("Incident does not belong to selected machine");
         }
         return incident;
+    }
+
+    private Organization machineOrganization(Machine machine) {
+        return machine.getProductionLine().getSector().getPlant().getOrganization();
     }
 }
