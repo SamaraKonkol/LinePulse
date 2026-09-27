@@ -3,6 +3,7 @@ package com.linepulse.service;
 import com.linepulse.asset.Machine;
 import com.linepulse.auth.UserAccount;
 import com.linepulse.incident.Incident;
+import com.linepulse.maintenance.WorkOrder;
 import com.linepulse.organization.Organization;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -36,6 +37,10 @@ public class ServiceRequest {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "incident_id")
     private Incident incident;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "work_order_id")
+    private WorkOrder workOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_technician_id")
@@ -83,6 +88,11 @@ public class ServiceRequest {
         this.status = ServiceRequestStatus.REQUESTED;
         this.requestedAt = requestedAt;
         this.updatedAt = requestedAt;
+    }
+
+    public void linkWorkOrder(WorkOrder workOrder, Instant at) {
+        this.workOrder = workOrder;
+        this.updatedAt = at;
     }
 
     public void assignTechnician(UserAccount technician, Instant at) {
@@ -146,6 +156,7 @@ public class ServiceRequest {
     public Organization getProvider() { return provider; }
     public Machine getMachine() { return machine; }
     public Incident getIncident() { return incident; }
+    public WorkOrder getWorkOrder() { return workOrder; }
     public UserAccount getAssignedTechnician() { return assignedTechnician; }
     public String getTitle() { return title; }
     public String getDescription() { return description; }

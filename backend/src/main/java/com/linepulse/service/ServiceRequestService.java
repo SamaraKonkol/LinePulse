@@ -9,6 +9,11 @@ import com.linepulse.common.NotFoundException;
 import com.linepulse.common.PageResponse;
 import com.linepulse.incident.Incident;
 import com.linepulse.incident.IncidentRepository;
+import com.linepulse.maintenance.MaintenanceType;
+import com.linepulse.maintenance.WorkOrder;
+import com.linepulse.maintenance.WorkOrderPriority;
+import com.linepulse.maintenance.WorkOrderRepository;
+import com.linepulse.maintenance.WorkOrderStatus;
 import com.linepulse.organization.Organization;
 import com.linepulse.organization.OrganizationAccessService;
 import com.linepulse.organization.OrganizationMembershipRepository;
@@ -39,6 +44,7 @@ public class ServiceRequestService {
     private final ServiceRequestRepository serviceRequestRepository;
     private final MachineRepository machineRepository;
     private final IncidentRepository incidentRepository;
+    private final WorkOrderRepository workOrderRepository;
     private final UserRepository userRepository;
 
     public ServiceRequestService(
@@ -48,6 +54,7 @@ public class ServiceRequestService {
             ServiceRequestRepository serviceRequestRepository,
             MachineRepository machineRepository,
             IncidentRepository incidentRepository,
+            WorkOrderRepository workOrderRepository,
             UserRepository userRepository
     ) {
         this.accessService = accessService;
@@ -56,6 +63,7 @@ public class ServiceRequestService {
         this.serviceRequestRepository = serviceRequestRepository;
         this.machineRepository = machineRepository;
         this.incidentRepository = incidentRepository;
+        this.workOrderRepository = workOrderRepository;
         this.userRepository = userRepository;
     }
 
@@ -135,7 +143,9 @@ public class ServiceRequestService {
     public ServiceRequestResponse accept(UUID id, AcceptServiceRequestRequest request) {
         ServiceRequest serviceRequest = findForExecutor(id);
         requireStatus(serviceRequest, ServiceRequestStatus.REQUESTED);
-        serviceRequest.accept(request.eta(), Instant.now());
+        Instant now = Instant.now();
+        serviceRequest.accept(request.eta(), now);
+        ensureWorkOrder(serviceRequest, request.eta(), now);
         return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
     }
 
@@ -195,7 +205,13 @@ public class ServiceRequestService {
         if (!Set.of(ServiceRequestStatus.ACCEPTED, ServiceRequestStatus.EN_ROUTE).contains(serviceRequest.getStatus())) {
             throw new ConflictException("O serviço só pode iniciar após o aceite.");
         }
-        serviceRequest.start(Instant.now());
+        Instant now = Instant.now();
+        serviceRequest.start(now);
+        WorkOrder workOrder = serviceRequest.getWorkOrder();
+        if (workOrder != null && workOrder.getStatus() == WorkOrderStatus.OPEN) {
+            workOrder.start(now);
+            workOrderRepository.save(workOrder);
+        }
         return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
     }
 
@@ -203,7 +219,13 @@ public class ServiceRequestService {
     public ServiceRequestResponse complete(UUID id, CompleteServiceRequestRequest request) {
         ServiceRequest serviceRequest = findForExecutor(id);
         requireStatus(serviceRequest, ServiceRequestStatus.IN_PROGRESS);
-        serviceRequest.complete(request.serviceNotes().trim(), normalize(request.partsUsed()), Instant.now());
+        Instant now = Instant.now();
+        serviceRequest.complete(request.serviceNotes().trim(), normalize(request.partsUsed()), now);
+        WorkOrder workOrder = serviceRequest.getWorkOrder();
+        if (workOrder != null && workOrder.getStatus() == WorkOrderStatus.IN_PROGRESS) {
+            workOrder.complete(now);
+            workOrderRepository.save(workOrder);
+        }
         return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
     }
 
@@ -225,7 +247,13 @@ public class ServiceRequestService {
         if (!Set.of(ServiceRequestStatus.REQUESTED, ServiceRequestStatus.ACCEPTED).contains(serviceRequest.getStatus())) {
             throw new ConflictException("Somente chamados aguardando atendimento ou recém-aceitos podem ser cancelados.");
         }
-        serviceRequest.cancel(Instant.now());
+        Instant now = Instant.now();
+        serviceRequest.cancel(now);
+        WorkOrder workOrder = serviceRequest.getWorkOrder();
+        if (workOrder != null && workOrder.getStatus() == WorkOrderStatus.OPEN) {
+            workOrder.cancel(now);
+            workOrderRepository.save(workOrder);
+        }
         return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
     }
 
@@ -254,6 +282,26 @@ public class ServiceRequestService {
             throw new AccessDeniedException("Chamados externos são executados pelo prestador selecionado.");
         }
         return request;
+    }
+
+    private void ensureWorkOrder(ServiceRequest request, Instant scheduledFor, Instant now) {
+        if (request.getWorkOrder() != null) {
+            return;
+        }
+        WorkOrder workOrder = workOrderRepository.save(new WorkOrder(
+                UUID.randomUUID(),
+                request.getMachine(),
+                request.getIncident(),
+                request.getTitle(),
+                request.getDescription(),
+                MaintenanceType.CORRECTIVE,
+                WorkOrderPriority.valueOf(request.getPriority().name()),
+                WorkOrderStatus.OPEN,
+                scheduledFor,
+                now,
+                now
+        ));
+        request.linkWorkOrder(workOrder, now);
     }
 
     private void requireStatus(ServiceRequest request, ServiceRequestStatus expected) {

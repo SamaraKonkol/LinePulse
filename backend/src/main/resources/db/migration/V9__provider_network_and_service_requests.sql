@@ -15,6 +15,7 @@ CREATE TABLE service_requests (
     provider_organization_id UUID REFERENCES organizations(id),
     machine_id UUID NOT NULL REFERENCES machines(id),
     incident_id UUID REFERENCES incidents(id),
+    work_order_id UUID UNIQUE REFERENCES work_orders(id),
     assigned_technician_id UUID REFERENCES users(id),
     title VARCHAR(180) NOT NULL,
     description TEXT NOT NULL,

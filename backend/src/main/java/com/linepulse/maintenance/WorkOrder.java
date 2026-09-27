@@ -74,6 +74,11 @@ public class WorkOrder {
         this.updatedAt = completedAt;
     }
 
+    public void cancel(Instant cancelledAt) {
+        this.status = WorkOrderStatus.CANCELLED;
+        this.updatedAt = cancelledAt;
+    }
+
     public UUID getId() { return id; }
     public Machine getMachine() { return machine; }
     public Incident getIncident() { return incident; }
