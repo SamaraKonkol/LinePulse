@@ -52,7 +52,8 @@ public class MaintenancePlan {
         this.updatedAt = updatedAt;
     }
 
-    public void update(String title, String description, int intervalDays, LocalDate nextDueDate, WorkOrderPriority priority, Instant at) {
+    public void update(Machine machine, String title, String description, int intervalDays, LocalDate nextDueDate, WorkOrderPriority priority, Instant at) {
+        this.machine = machine;
         this.title = title;
         this.description = description;
         this.intervalDays = intervalDays;
