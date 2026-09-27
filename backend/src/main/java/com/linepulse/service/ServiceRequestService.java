@@ -2,6 +2,7 @@ package com.linepulse.service;
 
 import com.linepulse.asset.Machine;
 import com.linepulse.asset.MachineRepository;
+import com.linepulse.audit.AuditService;
 import com.linepulse.auth.UserAccount;
 import com.linepulse.auth.UserRepository;
 import com.linepulse.common.ConflictException;
@@ -46,6 +47,7 @@ public class ServiceRequestService {
     private final IncidentRepository incidentRepository;
     private final WorkOrderRepository workOrderRepository;
     private final UserRepository userRepository;
+    private final AuditService auditService;
 
     public ServiceRequestService(
             OrganizationAccessService accessService,
@@ -55,7 +57,8 @@ public class ServiceRequestService {
             MachineRepository machineRepository,
             IncidentRepository incidentRepository,
             WorkOrderRepository workOrderRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            AuditService auditService
     ) {
         this.accessService = accessService;
         this.membershipRepository = membershipRepository;
@@ -65,6 +68,7 @@ public class ServiceRequestService {
         this.incidentRepository = incidentRepository;
         this.workOrderRepository = workOrderRepository;
         this.userRepository = userRepository;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -101,19 +105,12 @@ public class ServiceRequestService {
         }
 
         Instant now = Instant.now();
-        ServiceRequest serviceRequest = new ServiceRequest(
-                UUID.randomUUID(),
-                company,
-                provider,
-                machine,
-                incident,
-                request.title().trim(),
-                request.description().trim(),
-                request.channel(),
-                request.priority(),
-                now
-        );
-        return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
+        ServiceRequest saved = serviceRequestRepository.save(new ServiceRequest(
+                UUID.randomUUID(), company, provider, machine, incident,
+                request.title().trim(), request.description().trim(), request.channel(), request.priority(), now
+        ));
+        auditShared(saved, "SERVICE_REQUEST_CREATED", "Chamado aberto para " + machine.getAssetCode() + ": " + saved.getTitle());
+        return ServiceRequestResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
@@ -146,7 +143,9 @@ public class ServiceRequestService {
         Instant now = Instant.now();
         serviceRequest.accept(request.eta(), now);
         ensureWorkOrder(serviceRequest, request.eta(), now);
-        return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
+        ServiceRequest saved = serviceRequestRepository.save(serviceRequest);
+        auditShared(saved, "SERVICE_REQUEST_ACCEPTED", "Chamado aceito; OS " + saved.getWorkOrder().getId() + " criada");
+        return ServiceRequestResponse.from(saved);
     }
 
     @Transactional
@@ -154,7 +153,9 @@ public class ServiceRequestService {
         ServiceRequest serviceRequest = findForExecutor(id);
         requireStatus(serviceRequest, ServiceRequestStatus.REQUESTED);
         serviceRequest.decline(request.reason().trim(), Instant.now());
-        return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
+        ServiceRequest saved = serviceRequestRepository.save(serviceRequest);
+        auditShared(saved, "SERVICE_REQUEST_DECLINED", "Chamado recusado: " + truncate(request.reason().trim(), 160));
+        return ServiceRequestResponse.from(saved);
     }
 
     @Transactional
@@ -175,7 +176,9 @@ public class ServiceRequestService {
             throw new AccessDeniedException("O usuário informado não possui papel técnico nesta organização.");
         }
         serviceRequest.assignTechnician(technician, Instant.now());
-        return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
+        ServiceRequest saved = serviceRequestRepository.save(serviceRequest);
+        auditShared(saved, "SERVICE_REQUEST_ASSIGNED", "Chamado atribuído a " + technician.getRegistration());
+        return ServiceRequestResponse.from(saved);
     }
 
     @Transactional
@@ -185,7 +188,9 @@ public class ServiceRequestService {
             throw new ConflictException("A previsão só pode ser alterada após o aceite e antes do início do serviço.");
         }
         serviceRequest.updateEta(request.eta(), Instant.now());
-        return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
+        ServiceRequest saved = serviceRequestRepository.save(serviceRequest);
+        auditShared(saved, "SERVICE_REQUEST_ETA_UPDATED", "Previsão atualizada para " + request.eta());
+        return ServiceRequestResponse.from(saved);
     }
 
     @Transactional
@@ -196,7 +201,9 @@ public class ServiceRequestService {
         }
         requireStatus(serviceRequest, ServiceRequestStatus.ACCEPTED);
         serviceRequest.markEnRoute(Instant.now());
-        return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
+        ServiceRequest saved = serviceRequestRepository.save(serviceRequest);
+        auditShared(saved, "SERVICE_REQUEST_EN_ROUTE", "Prestador a caminho para " + saved.getMachine().getAssetCode());
+        return ServiceRequestResponse.from(saved);
     }
 
     @Transactional
@@ -212,7 +219,9 @@ public class ServiceRequestService {
             workOrder.start(now);
             workOrderRepository.save(workOrder);
         }
-        return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
+        ServiceRequest saved = serviceRequestRepository.save(serviceRequest);
+        auditShared(saved, "SERVICE_REQUEST_STARTED", "Atendimento iniciado em " + saved.getMachine().getAssetCode());
+        return ServiceRequestResponse.from(saved);
     }
 
     @Transactional
@@ -226,7 +235,9 @@ public class ServiceRequestService {
             workOrder.complete(now);
             workOrderRepository.save(workOrder);
         }
-        return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
+        ServiceRequest saved = serviceRequestRepository.save(serviceRequest);
+        auditShared(saved, "SERVICE_REQUEST_COMPLETED", "Atendimento concluído em " + saved.getMachine().getAssetCode());
+        return ServiceRequestResponse.from(saved);
     }
 
     @Transactional
@@ -236,7 +247,9 @@ public class ServiceRequestService {
                 .orElseThrow(() -> new NotFoundException("Chamado não encontrado."));
         requireStatus(serviceRequest, ServiceRequestStatus.COMPLETED);
         serviceRequest.approve(Instant.now());
-        return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
+        ServiceRequest saved = serviceRequestRepository.save(serviceRequest);
+        auditShared(saved, "SERVICE_REQUEST_APPROVED", "Execução aprovada pela empresa");
+        return ServiceRequestResponse.from(saved);
     }
 
     @Transactional
@@ -254,7 +267,9 @@ public class ServiceRequestService {
             workOrder.cancel(now);
             workOrderRepository.save(workOrder);
         }
-        return ServiceRequestResponse.from(serviceRequestRepository.save(serviceRequest));
+        ServiceRequest saved = serviceRequestRepository.save(serviceRequest);
+        auditShared(saved, "SERVICE_REQUEST_CANCELLED", "Chamado cancelado pela empresa");
+        return ServiceRequestResponse.from(saved);
     }
 
     private ServiceRequest findVisible(UUID id) {
@@ -285,32 +300,31 @@ public class ServiceRequestService {
     }
 
     private void ensureWorkOrder(ServiceRequest request, Instant scheduledFor, Instant now) {
-        if (request.getWorkOrder() != null) {
-            return;
-        }
+        if (request.getWorkOrder() != null) return;
         WorkOrder workOrder = workOrderRepository.save(new WorkOrder(
-                UUID.randomUUID(),
-                request.getMachine(),
-                request.getIncident(),
-                request.getTitle(),
-                request.getDescription(),
-                MaintenanceType.CORRECTIVE,
-                WorkOrderPriority.valueOf(request.getPriority().name()),
-                WorkOrderStatus.OPEN,
-                scheduledFor,
-                now,
-                now
+                UUID.randomUUID(), request.getMachine(), request.getIncident(), request.getTitle(), request.getDescription(),
+                MaintenanceType.CORRECTIVE, WorkOrderPriority.valueOf(request.getPriority().name()), WorkOrderStatus.OPEN,
+                scheduledFor, now, now
         ));
         request.linkWorkOrder(workOrder, now);
     }
 
-    private void requireStatus(ServiceRequest request, ServiceRequestStatus expected) {
-        if (request.getStatus() != expected) {
-            throw new ConflictException("Transição inválida para o estado atual do chamado.");
+    private void auditShared(ServiceRequest request, String action, String description) {
+        auditService.recordForOrganization(request.getCompany(), action, "SERVICE_REQUEST", request.getId(), truncate(description, 240));
+        if (request.getProvider() != null && !request.getProvider().getId().equals(request.getCompany().getId())) {
+            auditService.recordForOrganization(request.getProvider(), action, "SERVICE_REQUEST", request.getId(), truncate(description, 240));
         }
+    }
+
+    private void requireStatus(ServiceRequest request, ServiceRequestStatus expected) {
+        if (request.getStatus() != expected) throw new ConflictException("Transição inválida para o estado atual do chamado.");
     }
 
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private String truncate(String value, int max) {
+        return value.length() <= max ? value : value.substring(0, max);
     }
 }

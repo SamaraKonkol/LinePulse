@@ -1,5 +1,6 @@
 package com.linepulse.organization;
 
+import com.linepulse.audit.AuditService;
 import com.linepulse.auth.UserAccount;
 import com.linepulse.auth.UserRepository;
 import com.linepulse.auth.UserRole;
@@ -18,22 +19,25 @@ public class OrganizationMemberService {
     private final OrganizationMembershipRepository membershipRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
 
     public OrganizationMemberService(
             OrganizationAccessService accessService,
             OrganizationMembershipRepository membershipRepository,
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            AuditService auditService
     ) {
         this.accessService = accessService;
         this.membershipRepository = membershipRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
     public List<OrganizationMemberResponse> list() {
-        var current = accessService.currentMembership();
+        var current = accessService.requireCurrentRole(OrganizationRole.OWNER, OrganizationRole.ADMIN, OrganizationRole.TECHNICIAN, OrganizationRole.MECHANIC);
         return membershipRepository.findByOrganization_IdOrderByUser_NameAsc(current.getOrganization().getId()).stream()
                 .map(OrganizationMemberResponse::from)
                 .toList();
@@ -48,22 +52,11 @@ public class OrganizationMemberService {
         }
         Instant now = Instant.now();
         UserAccount user = userRepository.save(new UserAccount(
-                UUID.randomUUID(),
-                request.name().trim(),
-                request.registration().trim(),
-                passwordEncoder.encode(request.password()),
-                globalRoleFor(organization, request.role()),
-                true,
-                now,
-                now
+                UUID.randomUUID(), request.name().trim(), request.registration().trim(), passwordEncoder.encode(request.password()),
+                globalRoleFor(organization, request.role()), true, now, now
         ));
-        OrganizationMembership membership = membershipRepository.save(new OrganizationMembership(
-                organization,
-                user,
-                request.role(),
-                true,
-                now
-        ));
+        OrganizationMembership membership = membershipRepository.save(new OrganizationMembership(organization, user, request.role(), true, now));
+        auditService.recordForOrganization(organization, "ORGANIZATION_MEMBER_CREATED", "USER", user.getId(), "Membro " + user.getRegistration() + " criado como " + request.role());
         return OrganizationMemberResponse.from(membership);
     }
 
@@ -74,7 +67,9 @@ public class OrganizationMemberService {
         membership.changeRole(request.role());
         membership.getUser().changeRole(globalRoleFor(actor.getOrganization(), request.role()));
         userRepository.save(membership.getUser());
-        return OrganizationMemberResponse.from(membershipRepository.save(membership));
+        OrganizationMembership saved = membershipRepository.save(membership);
+        auditService.recordForOrganization(actor.getOrganization(), "ORGANIZATION_MEMBER_ROLE_CHANGED", "USER", userId, "Papel de " + saved.getUser().getRegistration() + " alterado para " + request.role());
+        return OrganizationMemberResponse.from(saved);
     }
 
     @Transactional
@@ -82,7 +77,9 @@ public class OrganizationMemberService {
         var actor = accessService.requireCurrentRole(OrganizationRole.OWNER, OrganizationRole.ADMIN);
         OrganizationMembership membership = findMembership(actor.getOrganization().getId(), userId);
         membership.changeActive(request.active());
-        return OrganizationMemberResponse.from(membershipRepository.save(membership));
+        OrganizationMembership saved = membershipRepository.save(membership);
+        auditService.recordForOrganization(actor.getOrganization(), "ORGANIZATION_MEMBER_STATUS_CHANGED", "USER", userId, "Membro " + saved.getUser().getRegistration() + (request.active() ? " ativado" : " desativado"));
+        return OrganizationMemberResponse.from(saved);
     }
 
     private OrganizationMembership findMembership(UUID organizationId, UUID userId) {
