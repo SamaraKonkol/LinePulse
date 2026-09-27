@@ -10,6 +10,9 @@ import com.linepulse.asset.MachineRepository;
 import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
 import com.linepulse.incident.IncidentRepository;
+import com.linepulse.organization.Organization;
+import com.linepulse.organization.OrganizationService;
+import com.linepulse.organization.OrganizationType;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,11 +23,15 @@ class WorkOrderServiceTest {
     private WorkOrderRepository workOrderRepository;
     private WorkOrderService service;
     private Machine machine;
+    private UUID organizationId;
 
     @BeforeEach
     void setUp() {
         workOrderRepository = mock(WorkOrderRepository.class);
-        service = new WorkOrderService(workOrderRepository, mock(MachineRepository.class), mock(IncidentRepository.class), mock(AuditService.class));
+        OrganizationService organizationService = mock(OrganizationService.class);
+        organizationId = UUID.randomUUID();
+        when(organizationService.currentOrganization()).thenReturn(new Organization(organizationId, "Empresa Teste", "empresa-teste", OrganizationType.COMPANY, true, Instant.now()));
+        service = new WorkOrderService(workOrderRepository, mock(MachineRepository.class), mock(IncidentRepository.class), mock(AuditService.class), organizationService);
         machine = mock(Machine.class);
         when(machine.getId()).thenReturn(UUID.randomUUID());
         when(machine.getAssetCode()).thenReturn("PR-04");
@@ -36,7 +43,7 @@ class WorkOrderServiceTest {
         UUID id = UUID.randomUUID();
         Instant now = Instant.now();
         WorkOrder workOrder = new WorkOrder(id, machine, null, "Falha hidráulica", "Inspecionar circuito", MaintenanceType.CORRECTIVE, WorkOrderPriority.HIGH, WorkOrderStatus.OPEN, null, now, now);
-        when(workOrderRepository.findById(id)).thenReturn(Optional.of(workOrder));
+        when(workOrderRepository.findByIdAndMachine_ProductionLine_Sector_Plant_Organization_Id(id, organizationId)).thenReturn(Optional.of(workOrder));
 
         WorkOrderResponse started = service.start(id);
         WorkOrderResponse completed = service.complete(id);
@@ -51,7 +58,7 @@ class WorkOrderServiceTest {
         Instant now = Instant.now();
         WorkOrder workOrder = new WorkOrder(id, machine, null, "Falha hidráulica", "Inspecionar circuito", MaintenanceType.CORRECTIVE, WorkOrderPriority.HIGH, WorkOrderStatus.OPEN, null, now, now);
         workOrder.start(now);
-        when(workOrderRepository.findById(id)).thenReturn(Optional.of(workOrder));
+        when(workOrderRepository.findByIdAndMachine_ProductionLine_Sector_Plant_Organization_Id(id, organizationId)).thenReturn(Optional.of(workOrder));
 
         assertThrows(ConflictException.class, () -> service.start(id));
     }
