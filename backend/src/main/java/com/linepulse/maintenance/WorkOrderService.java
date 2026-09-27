@@ -8,6 +8,7 @@ import com.linepulse.common.NotFoundException;
 import com.linepulse.common.PageResponse;
 import com.linepulse.incident.Incident;
 import com.linepulse.incident.IncidentRepository;
+import com.linepulse.organization.OrganizationService;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -23,33 +24,41 @@ public class WorkOrderService {
     private final MachineRepository machineRepository;
     private final IncidentRepository incidentRepository;
     private final AuditService auditService;
+    private final OrganizationService organizationService;
 
-    public WorkOrderService(WorkOrderRepository workOrderRepository, MachineRepository machineRepository, IncidentRepository incidentRepository, AuditService auditService) {
+    public WorkOrderService(WorkOrderRepository workOrderRepository, MachineRepository machineRepository, IncidentRepository incidentRepository, AuditService auditService, OrganizationService organizationService) {
         this.workOrderRepository = workOrderRepository;
         this.machineRepository = machineRepository;
         this.incidentRepository = incidentRepository;
         this.auditService = auditService;
+        this.organizationService = organizationService;
     }
 
     @Transactional(readOnly = true)
     public List<WorkOrderResponse> findAll() {
-        return workOrderRepository.findAllByOrderByCreatedAtDesc().stream()
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return workOrderRepository.findAllByMachine_ProductionLine_Sector_Plant_Organization_IdOrderByCreatedAtDesc(organizationId).stream()
                 .map(WorkOrderResponse::from)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public PageResponse<WorkOrderResponse> findPage(int page, int size) {
+        UUID organizationId = organizationService.currentOrganization().getId();
         int safeSize = Math.min(Math.max(size, 1), 100);
-        Page<WorkOrder> result = workOrderRepository.findAll(PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "createdAt")));
+        Page<WorkOrder> result = workOrderRepository.findAllByMachine_ProductionLine_Sector_Plant_Organization_Id(
+                organizationId,
+                PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
         return PageResponse.from(result, result.getContent().stream().map(WorkOrderResponse::from).toList());
     }
 
     @Transactional
     public WorkOrderResponse create(CreateWorkOrderRequest request) {
-        Machine machine = machineRepository.findById(request.machineId())
+        UUID organizationId = organizationService.currentOrganization().getId();
+        Machine machine = machineRepository.findByIdAndProductionLine_Sector_Plant_Organization_Id(request.machineId(), organizationId)
                 .orElseThrow(() -> new NotFoundException("Machine not found"));
-        Incident incident = resolveIncident(request.incidentId(), machine);
+        Incident incident = resolveIncident(request.incidentId(), machine, organizationId);
         return createOrder(machine, incident, request.title(), request.description(), request.type(), request.priority(), request.scheduledFor(), "WORK_ORDER_CREATED");
     }
 
@@ -92,13 +101,14 @@ public class WorkOrderService {
     }
 
     private WorkOrder findById(UUID id) {
-        return workOrderRepository.findById(id)
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return workOrderRepository.findByIdAndMachine_ProductionLine_Sector_Plant_Organization_Id(id, organizationId)
                 .orElseThrow(() -> new NotFoundException("Work order not found"));
     }
 
-    private Incident resolveIncident(UUID incidentId, Machine machine) {
+    private Incident resolveIncident(UUID incidentId, Machine machine, UUID organizationId) {
         if (incidentId == null) return null;
-        Incident incident = incidentRepository.findById(incidentId)
+        Incident incident = incidentRepository.findByIdAndMachine_ProductionLine_Sector_Plant_Organization_Id(incidentId, organizationId)
                 .orElseThrow(() -> new NotFoundException("Incident not found"));
         if (!incident.getMachine().getId().equals(machine.getId())) {
             throw new IllegalArgumentException("Incident does not belong to selected machine");
