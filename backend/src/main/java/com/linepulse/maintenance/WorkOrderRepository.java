@@ -4,11 +4,14 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
     List<WorkOrder> findAllByOrderByCreatedAtDesc();
     List<WorkOrder> findAllByMachine_ProductionLine_Sector_Plant_Organization_IdOrderByCreatedAtDesc(UUID organizationId);
+    Page<WorkOrder> findAllByMachine_ProductionLine_Sector_Plant_Organization_Id(UUID organizationId, Pageable pageable);
     Optional<WorkOrder> findByIdAndMachine_ProductionLine_Sector_Plant_Organization_Id(UUID id, UUID organizationId);
     List<WorkOrder> findByStatusAndCompletedAtAfter(WorkOrderStatus status, Instant completedAfter);
     List<WorkOrder> findByMachine_ProductionLine_Sector_Plant_Organization_IdAndStatusAndCompletedAtAfter(UUID organizationId, WorkOrderStatus status, Instant completedAfter);
