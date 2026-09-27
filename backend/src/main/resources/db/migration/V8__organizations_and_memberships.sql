@@ -34,6 +34,7 @@ FROM users;
 
 ALTER TABLE plants ADD COLUMN organization_id UUID;
 UPDATE plants SET organization_id = '00000000-0000-0000-0000-000000000001';
+ALTER TABLE plants ALTER COLUMN organization_id SET DEFAULT '00000000-0000-0000-0000-000000000001';
 ALTER TABLE plants ALTER COLUMN organization_id SET NOT NULL;
 ALTER TABLE plants ADD CONSTRAINT fk_plant_organization FOREIGN KEY (organization_id) REFERENCES organizations(id);
 ALTER TABLE plants DROP CONSTRAINT IF EXISTS plants_code_key;
