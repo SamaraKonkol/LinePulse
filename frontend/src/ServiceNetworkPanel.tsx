@@ -51,6 +51,7 @@ function ServiceNetworkPanel({ machines, incidents }: Props) {
       queryClient.invalidateQueries({ queryKey: ['organization-members'] }),
       queryClient.invalidateQueries({ queryKey: ['work-orders'] }),
       queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+      queryClient.invalidateQueries({ queryKey: ['alerts'] }),
     ]);
   };
 
