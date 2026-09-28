@@ -172,16 +172,17 @@ test('company owner can manage team roles and membership status from the V3 work
 
   await page.goto('/LinePulse/');
 
-  await expect(page.getByText('Membros atuais', { exact: true })).toBeVisible();
-  await expect(page.getByText('Owner E2E', { exact: true })).toBeVisible();
-  await expect(page.getByText('Técnico E2E', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('Papel de Owner E2E')).toHaveValue('OWNER');
-  await expect(page.getByLabel('Papel de Técnico E2E')).toHaveValue('TECHNICIAN');
+  const serviceNetwork = page.locator('#service-network');
+  await expect(serviceNetwork.getByText('Membros atuais', { exact: true })).toBeVisible();
+  await expect(serviceNetwork.getByText('Owner E2E', { exact: true })).toBeVisible();
+  await expect(serviceNetwork.getByText('Técnico E2E', { exact: true })).toBeVisible();
+  await expect(serviceNetwork.getByLabel('Papel de Owner E2E')).toHaveValue('OWNER');
+  await expect(serviceNetwork.getByLabel('Papel de Técnico E2E')).toHaveValue('TECHNICIAN');
 
-  await page.getByLabel('Papel de Técnico E2E').selectOption('ADMIN');
+  await serviceNetwork.getByLabel('Papel de Técnico E2E').selectOption('ADMIN');
   await expect.poll(() => memberMutationPaths.includes('/organization-members/tech-1/role')).toBeTruthy();
 
-  const technicianRow = page.locator('.member-management-row').filter({ hasText: 'Técnico E2E' });
+  const technicianRow = serviceNetwork.locator('.member-management-row').filter({ hasText: 'Técnico E2E' });
   await technicianRow.getByRole('button', { name: 'Desativar' }).click();
   await expect.poll(() => memberMutationPaths.includes('/organization-members/tech-1/status')).toBeTruthy();
 });
