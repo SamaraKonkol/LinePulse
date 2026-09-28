@@ -25,6 +25,8 @@ public interface OrganizationMembershipRepository extends JpaRepository<Organiza
     @EntityGraph(attributePaths = {"organization", "user"})
     List<OrganizationMembership> findByOrganization_IdAndActiveTrueOrderByUser_NameAsc(UUID organizationId);
 
+    long countByOrganization_IdAndRoleAndActiveTrue(UUID organizationId, OrganizationRole role);
+
     boolean existsByOrganization_IdAndUser_Id(UUID organizationId, UUID userId);
     boolean existsByUser_RegistrationIgnoreCase(String registration);
 }
