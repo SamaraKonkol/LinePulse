@@ -64,6 +64,7 @@ public class OrganizationMemberService {
     public OrganizationMemberResponse changeRole(UUID userId, UpdateOrganizationMemberRoleRequest request) {
         var actor = accessService.requireCurrentRole(OrganizationRole.OWNER, OrganizationRole.ADMIN);
         OrganizationMembership membership = findMembership(actor.getOrganization().getId(), userId);
+        ensureOrganizationKeepsActiveOwner(actor.getOrganization().getId(), membership, request.role(), membership.isActive());
         membership.changeRole(request.role());
         membership.getUser().changeRole(globalRoleFor(actor.getOrganization(), request.role()));
         userRepository.save(membership.getUser());
@@ -76,10 +77,21 @@ public class OrganizationMemberService {
     public OrganizationMemberResponse changeStatus(UUID userId, UpdateOrganizationMemberStatusRequest request) {
         var actor = accessService.requireCurrentRole(OrganizationRole.OWNER, OrganizationRole.ADMIN);
         OrganizationMembership membership = findMembership(actor.getOrganization().getId(), userId);
+        ensureOrganizationKeepsActiveOwner(actor.getOrganization().getId(), membership, membership.getRole(), request.active());
         membership.changeActive(request.active());
         OrganizationMembership saved = membershipRepository.save(membership);
         auditService.recordForOrganization(actor.getOrganization(), "ORGANIZATION_MEMBER_STATUS_CHANGED", "USER", userId, "Membro " + saved.getUser().getRegistration() + (request.active() ? " ativado" : " desativado"));
         return OrganizationMemberResponse.from(saved);
+    }
+
+    private void ensureOrganizationKeepsActiveOwner(UUID organizationId, OrganizationMembership membership, OrganizationRole resultingRole, boolean resultingActive) {
+        boolean removesActiveOwner = membership.isActive()
+                && membership.getRole() == OrganizationRole.OWNER
+                && (!resultingActive || resultingRole != OrganizationRole.OWNER);
+        if (removesActiveOwner
+                && membershipRepository.countByOrganization_IdAndRoleAndActiveTrue(organizationId, OrganizationRole.OWNER) <= 1) {
+            throw new ConflictException("A organização precisa manter pelo menos um OWNER ativo.");
+        }
     }
 
     private OrganizationMembership findMembership(UUID organizationId, UUID userId) {
