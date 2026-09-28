@@ -1,6 +1,6 @@
 # LinePulse
 
-Industrial maintenance and operations platform for managing production assets, incidents, preventive and corrective maintenance, downtime, reliability history and operational indicators.
+Industrial maintenance and service-network platform for managing production assets, incidents, preventive and corrective maintenance, downtime, reliability indicators and multi-company maintenance workflows.
 
 ## Stack
 
@@ -46,9 +46,9 @@ Industrial maintenance and operations platform for managing production assets, i
 
 ```mermaid
 flowchart LR
-    WEB[React + TypeScript] -->|REST + JWT| API[Spring Boot API]
+    WEB[React + TypeScript] -->|REST + JWT + active organization| API[Spring Boot API]
     API --> DB[(PostgreSQL)]
-    API --> AUDIT[Audit trail]
+    API --> AUDIT[Organization-scoped audit trail]
     SCHED[Preventive scheduler] --> API
     FLYWAY[Flyway migrations] --> DB
     CI[GitHub Actions] --> TESTS[Backend + E2E tests]
@@ -61,73 +61,137 @@ The backend follows a layered flow for the main domains:
 Controller -> Service -> Repository -> PostgreSQL
 ```
 
+The V3 authorization model adds an organization boundary to requests. A user can belong to multiple organizations and the effective request role is resolved from the active membership instead of trusting only the legacy global JWT role.
+
 ## Documentation
 
 - [Architecture decisions and technical flows](docs/architecture.md)
 - [Domain model and lifecycle rules](docs/domain-model.md)
-- [External integrations and v2 boundaries](docs/external-integrations.md)
+- [External integrations and boundaries](docs/external-integrations.md)
+- [Multi-organization service network](docs/multi-organization-service-network.md)
+- [V3 provider service network](docs/v3-provider-service-network.md)
+- [Production deployment](docs/deployment.md)
 
-## Roles
+## Organization model
 
-- `ADMIN` — industrial structure, assets, preventive planning, users and operational management
-- `TECHNICIAN` — maintenance execution, incident diagnosis, downtime and operational machine status
-- `OPERATOR` — operational visibility and incident reporting
+V3 supports two organization types:
+
+- `COMPANY` — industrial company that owns plants, sectors, lines, machines, incidents and work orders.
+- `SERVICE_PROVIDER` — maintenance provider that can receive service requests from trusted companies.
+
+Organization memberships define the effective role inside each workspace:
+
+- `OWNER`
+- `ADMIN`
+- `TECHNICIAN`
+- `OPERATOR`
+- `MECHANIC`
+
+The active workspace can be selected through the frontend and is sent to the API using `X-LinePulse-Organization`.
 
 ## Current features
 
-- Closed-access authentication using employee registration + BCrypt password + JWT
-- Administrator-only user creation, role management, activation/deactivation and deletion
-- Role-based API authorization enforced in the backend
-- Industrial hierarchy administration: plant → sector → production line → machine
-- Create, edit and activate/deactivate plants, sectors and production lines
-- Machine registration and structural editing restricted to administrators
-- Machine retirement/reactivation restricted to administrators
-- Machine operational status management for technicians and administrators
-- Machine search and filters by line, status and manufacturer
-- Individual machine workspace with asset data, 24-hour availability, MTTR, incidents, work orders, downtime and event timeline
-- QR Code and deep link for direct access to each machine workspace
-- Incident categories: mechanical, electrical, hydraulic, pneumatic, safety, process and other
-- Incident lifecycle: open, in progress, resolved and cancelled
-- Root-cause and applied-solution capture when technicians resolve incidents
-- Searchable incident history with status, priority and category filters
-- Preventive maintenance plans with recurrence, next due date, priority and activation lifecycle
-- Hourly scheduler that generates due preventive work orders automatically
-- Manual preventive work-order generation when needed
-- Maintenance work order creation, start and completion lifecycle
-- Searchable maintenance history with status, type and priority filters
-- Internal alerts for critical incidents, prolonged downtime, critical work orders and preventive maintenance due within seven days
-- Downtime registration and closing
-- Availability calculation using real downtime intervals
-- MTTR calculation using completed maintenance orders
-- Operational indicators grouped by production line and machine
-- Operational risk list for assets that require attention
-- Interactive dashboard cards that navigate to the related operational context
-- Seven-day incident trend chart backed by API data
-- Persistent audit trail with authenticated employee registration and timestamp
-- Audit filters by employee registration, action, entity and period
-- CSV export for incidents, maintenance work orders, downtime and audit history
-- Paginated API endpoints for incidents, work orders and audit events, while legacy list endpoints remain compatible with the current UI
-- Administrator user filters by name/registration, role and status
-- API-derived error messages for administrative and operational actions
-- Responsive React interface with green, copper, steel and verdigris visual identity
-- PostgreSQL schema managed with Flyway migrations
-- OpenAPI documentation with Bearer JWT authentication
-- Unit and integration tests for lifecycle, authorization, incidents, maintenance, alerts and dashboard indicators
-- Playwright E2E coverage validating role-specific frontend access
-- CI pipeline validating backend tests, frontend build, browser E2E and Docker Compose build
-- Production frontend on GitHub Pages and API/PostgreSQL deployment prepared for Render
+### Industrial operations and reliability
+- Closed-access authentication using employee registration + BCrypt password + JWT.
+- Login attempt throttling after repeated failures.
+- Administrator-only user creation and lifecycle management for legacy administration flows.
+- Industrial hierarchy: plant → sector → production line → machine.
+- Create, edit, activate/deactivate and administrate industrial structure.
+- Machine operational status management.
+- Machine search and filters.
+- Individual machine workspace with asset data, 24-hour availability, MTTR, incidents, work orders, downtime and timeline.
+- QR Code and deep link for each machine workspace.
+- Incident categories, priorities and lifecycle.
+- Root-cause and applied-solution capture.
+- Searchable incident history.
+- Preventive maintenance plans with recurrence and next due date.
+- Hourly scheduler that generates due preventive work orders automatically.
+- Corrective, preventive and inspection work orders.
+- Work-order lifecycle and searchable history.
+- Downtime registration and closing.
+- Availability calculation using real downtime intervals.
+- MTTR calculation using completed maintenance orders.
+- Operational indicators by production line and machine.
+- Operational risk list and seven-day incident trend.
+- CSV export for incidents, work orders, downtime and audit history.
+- Paginated API endpoints for high-volume histories.
+
+### V3 multi-company service network
+- Multi-organization memberships and workspace selection.
+- Organization-scoped authorization and data isolation.
+- Effective role resolution from the active organization membership.
+- Company ↔ service-provider trust relationships.
+- Provider onboarding with its own owner account.
+- Organization-local team management for technicians and mechanics.
+- Internal or external service-request creation.
+- Provider queue across trusted customer companies.
+- Service-request priority, ETA and execution lifecycle.
+- Provider accept/decline flow.
+- Technician/mechanic assignment.
+- External `EN_ROUTE` state.
+- Start, complete and company-approval workflow.
+- Service notes and parts-used recording.
+- Automatic work-order creation when a request is accepted.
+- Synchronization between service-request lifecycle and the linked V2 work order.
+- Audit events mirrored to both organizations for shared external service actions.
+- Tenant-scoped audit trail.
+- Operational alerts for new provider requests, critical requests, expired ETA and company approval pending.
+
+### Security and quality
+- Backend role enforcement with organization-aware authority resolution.
+- Cross-tenant isolation tests with PostgreSQL/Testcontainers.
+- Tests that reject access to another provider's request even when the UUID is known.
+- Audit isolation by organization.
+- Production demo accounts disabled by default.
+- OpenAPI documentation with Bearer JWT authentication.
+- Unit and integration tests for lifecycle, authorization, incidents, maintenance, service network, alerts and dashboard indicators.
+- Playwright E2E coverage for role-specific frontend access.
+- CI validating backend tests, frontend build, browser E2E and Docker Compose stack.
+- Docker smoke test with PostgreSQL, API and `/api/health`.
+- Production frontend deployment through GitHub Pages.
+
+## Service-request lifecycle
+
+External flow:
+
+```text
+Company opens request
+  -> Provider receives request
+  -> ACCEPT / DECLINE
+  -> ETA
+  -> EN_ROUTE
+  -> IN_PROGRESS
+  -> COMPLETED
+  -> Company APPROVED
+```
+
+Accepting a request creates a linked corrective work order. Starting, completing or cancelling the request keeps the work order synchronized.
+
+Internal requests use the same service-request model but are executed by the company's own technical team.
+
+## Operational alerts
+
+The dashboard alert stream currently covers:
+
+- critical active incidents;
+- prolonged downtime;
+- critical pending work orders;
+- preventive maintenance due soon or overdue;
+- new external service requests for providers;
+- critical external requests;
+- accepted/en-route requests whose ETA has expired;
+- completed service requests waiting for company approval.
 
 ## Scalable list endpoints
-
-The current dashboard still uses compact list endpoints for its live operational view. Larger consumers can use paginated endpoints:
 
 ```text
 GET /api/incidents/page?page=0&size=25
 GET /api/work-orders/page?page=0&size=25
 GET /api/audit-events/page?page=0&size=50
+GET /api/service-requests?page=0&size=25
 ```
 
-Page size is capped at 100 records.
+Page size is capped at 100 records where pagination is supported.
 
 ## Project structure
 
@@ -139,31 +203,34 @@ LinePulse/
 │   │   ├── asset/
 │   │   ├── audit/
 │   │   ├── auth/
-│   │   ├── common/
-│   │   ├── config/
 │   │   ├── dashboard/
 │   │   ├── downtime/
 │   │   ├── incident/
-│   │   └── maintenance/
+│   │   ├── maintenance/
+│   │   ├── organization/
+│   │   └── service/
 │   ├── src/test/java/com/linepulse/
 │   └── Dockerfile
 ├── frontend/
 │   ├── e2e/
 │   ├── src/
+│   │   ├── ServiceNetworkPanel.tsx
+│   │   └── services/
 │   ├── Dockerfile
 │   └── nginx.conf
 ├── docs/
 ├── .github/workflows/
-└── docker-compose.yml
+├── docker-compose.yml
+└── render.yaml
 ```
 
-## Run the complete stack with Docker
+## Run the complete stack locally
 
 ```bash
 docker compose up --build
 ```
 
-After the containers start:
+After containers start:
 
 ```text
 Frontend: http://localhost:5173
@@ -172,9 +239,11 @@ Swagger: http://localhost:8080/swagger-ui/index.html
 PostgreSQL: localhost:5432
 ```
 
-### Demo users
+### Local demo users
 
-Docker Compose enables local demo users automatically:
+Docker Compose can enable demo users for local development. Public production deployment keeps demo initialization disabled.
+
+Default local roles:
 
 | Role | Registration | Password |
 | --- | --- | --- |
@@ -182,15 +251,13 @@ Docker Compose enables local demo users automatically:
 | Technician | `TEC001` | `LinePulse123!` |
 | Operator | `OPE001` | `LinePulse123!` |
 
-Demo user creation is disabled by default outside the Docker development configuration. Do not enable demo users with public credentials in a production environment.
-
-Stop the stack with:
+Stop the stack:
 
 ```bash
 docker compose down
 ```
 
-To also remove the local PostgreSQL volume:
+Remove the local PostgreSQL volume as well:
 
 ```bash
 docker compose down -v
@@ -198,20 +265,20 @@ docker compose down -v
 
 ## Run services manually
 
-Start only PostgreSQL:
+Start PostgreSQL:
 
 ```bash
 docker compose up -d postgres
 ```
 
-Run the backend:
+Backend:
 
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-Run the frontend:
+Frontend:
 
 ```bash
 cd frontend
@@ -219,19 +286,12 @@ npm install
 npm run dev
 ```
 
-Run browser tests:
+Browser tests:
 
 ```bash
 cd frontend
 npx playwright install chromium
 npm run test:e2e
-```
-
-To enable the three demo users when running the backend manually, define:
-
-```text
-DEMO_USERS_ENABLED=true
-DEMO_USERS_PASSWORD=LinePulse123!
 ```
 
 ## API documentation
@@ -242,13 +302,13 @@ With the backend running locally:
 http://localhost:8080/swagger-ui/index.html
 ```
 
-The OpenAPI specification is available at:
+OpenAPI JSON:
 
 ```text
 http://localhost:8080/v3/api-docs
 ```
 
-Authenticate through `/api/auth/login` using employee registration and password, copy the returned token and use the Swagger `Authorize` control for protected endpoints.
+Authenticate through `/api/auth/login`, then use the returned Bearer token in Swagger.
 
 ## Environment variables
 
@@ -262,9 +322,15 @@ JWT_SECRET
 CORS_ALLOWED_ORIGINS
 ```
 
-The datasource also supports `DATABASE_HOST`, `DATABASE_PORT` and `DATABASE_NAME` when a full `DATABASE_URL` is not supplied.
+The datasource also supports:
 
-Optional development variables:
+```text
+DATABASE_HOST
+DATABASE_PORT
+DATABASE_NAME
+```
+
+Optional/development variables:
 
 ```text
 DEMO_USERS_ENABLED
@@ -278,27 +344,30 @@ Frontend:
 VITE_API_URL
 ```
 
-The Docker Compose configuration uses local development defaults and supports overriding `JWT_SECRET`, `DEMO_USERS_PASSWORD` and `VITE_API_URL` through environment variables.
+For production, keep `DEMO_USERS_ENABLED=false`.
 
 ## External integration boundaries
 
-Binary photo/file attachments are intentionally not stored on the Render application filesystem because free/ephemeral instances do not provide a suitable durable attachment store. Production attachment upload requires an object-storage destination such as S3-compatible storage.
+Binary photos/files are intentionally not stored on the Render application filesystem. Durable attachments require object storage such as S3-compatible storage.
 
-AI-assisted incident classification is also intentionally not faked with hard-coded rules. The domain model now has technical categories, priorities and diagnosis fields ready for an AI suggestion layer once a model/provider and credential are configured.
+AI-assisted incident classification is not faked with hard-coded rules. The domain model is ready for a future model/provider integration.
 
-External notification delivery can later consume the existing operational alerts through a webhook, e-mail or messaging integration. Internal alerting already covers the operational rules without external credentials.
+External notification delivery can later consume operational events through webhook, e-mail or messaging integrations. The current product already exposes in-app operational alerts.
 
-## Roadmap
+## Next priorities
 
-- Durable object storage for photos and technical attachments
-- Optional webhook/e-mail delivery for operational alerts
-- AI-assisted incident classification and troubleshooting suggestions
-- Production observability and deployment hardening
-- Migrate high-volume UI histories to paginated endpoints when dataset size requires it
+- Durable object storage for service photos and technical attachments.
+- External e-mail/webhook/message delivery for service-network events.
+- Production observability and structured telemetry.
+- Stronger distributed login throttling if the backend scales beyond one instance.
+- More browser E2E coverage specifically for V3 workspace switching and service-request execution.
+- Destructive security/authorization QA across tenant boundaries before production commercialization.
 
 ## Status
 
-LinePulse v2 — maintenance planning and reliability workspace in active development.
+**LinePulse V3 — multi-organization industrial maintenance and provider service network in active development.**
+
+Core V2 maintenance/reliability flows remain supported and are integrated with the V3 service-request lifecycle.
 
 ## Author
 

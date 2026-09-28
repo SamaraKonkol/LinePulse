@@ -12,6 +12,13 @@ import com.linepulse.maintenance.WorkOrderPriority;
 import com.linepulse.maintenance.WorkOrderResponse;
 import com.linepulse.maintenance.WorkOrderService;
 import com.linepulse.maintenance.WorkOrderStatus;
+import com.linepulse.organization.Organization;
+import com.linepulse.organization.OrganizationAccessService;
+import com.linepulse.organization.OrganizationType;
+import com.linepulse.service.ServiceRequest;
+import com.linepulse.service.ServiceRequestPriority;
+import com.linepulse.service.ServiceRequestRepository;
+import com.linepulse.service.ServiceRequestStatus;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,6 +26,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,12 +36,23 @@ public class AlertService {
     private final WorkOrderService workOrderService;
     private final DowntimeService downtimeService;
     private final MaintenancePlanService maintenancePlanService;
+    private final OrganizationAccessService organizationAccessService;
+    private final ServiceRequestRepository serviceRequestRepository;
 
-    public AlertService(IncidentService incidentService, WorkOrderService workOrderService, DowntimeService downtimeService, MaintenancePlanService maintenancePlanService) {
+    public AlertService(
+            IncidentService incidentService,
+            WorkOrderService workOrderService,
+            DowntimeService downtimeService,
+            MaintenancePlanService maintenancePlanService,
+            OrganizationAccessService organizationAccessService,
+            ServiceRequestRepository serviceRequestRepository
+    ) {
         this.incidentService = incidentService;
         this.workOrderService = workOrderService;
         this.downtimeService = downtimeService;
         this.maintenancePlanService = maintenancePlanService;
+        this.organizationAccessService = organizationAccessService;
+        this.serviceRequestRepository = serviceRequestRepository;
     }
 
     @Transactional(readOnly = true)
@@ -62,10 +81,36 @@ public class AlertService {
                 .map(plan -> preventiveAlert(plan, today))
                 .forEach(alerts::add);
 
+        addServiceNetworkAlerts(alerts, now);
+
         alerts.sort(Comparator
                 .comparingInt((OperationalAlert alert) -> alert.severity() == AlertSeverity.CRITICAL ? 0 : 1)
                 .thenComparing(OperationalAlert::detectedAt, Comparator.reverseOrder()));
         return alerts;
+    }
+
+    private void addServiceNetworkAlerts(List<OperationalAlert> alerts, Instant now) {
+        Organization organization = organizationAccessService.currentMembership().getOrganization();
+        if (organization.getType() == OrganizationType.SERVICE_PROVIDER) {
+            serviceRequestRepository.findTop100ByProvider_IdAndStatusInOrderByRequestedAtDesc(
+                            organization.getId(),
+                            Set.of(ServiceRequestStatus.REQUESTED, ServiceRequestStatus.ACCEPTED, ServiceRequestStatus.EN_ROUTE)
+                    ).forEach(request -> {
+                        if (request.getStatus() == ServiceRequestStatus.REQUESTED) {
+                            alerts.add(incomingServiceRequestAlert(request));
+                        } else if (request.getEta() != null && request.getEta().isBefore(now)) {
+                            alerts.add(overdueEtaAlert(request));
+                        }
+                    });
+            return;
+        }
+
+        serviceRequestRepository.findTop100ByCompany_IdAndStatusInOrderByRequestedAtDesc(
+                        organization.getId(),
+                        Set.of(ServiceRequestStatus.COMPLETED)
+                ).stream()
+                .map(this::pendingServiceApprovalAlert)
+                .forEach(alerts::add);
     }
 
     private boolean isCriticalActiveIncident(IncidentResponse incident) {
@@ -128,6 +173,43 @@ public class AlertService {
                 "MAINTENANCE_PLAN",
                 plan.id(),
                 plan.nextDueDate().atStartOfDay().toInstant(ZoneOffset.UTC)
+        );
+    }
+
+    private OperationalAlert incomingServiceRequestAlert(ServiceRequest request) {
+        boolean critical = request.getPriority() == ServiceRequestPriority.CRITICAL;
+        return new OperationalAlert(
+                "SERVICE_REQUEST:REQUESTED:" + request.getId(),
+                critical ? AlertSeverity.CRITICAL : AlertSeverity.WARNING,
+                critical ? "Novo chamado externo crítico" : "Novo chamado externo",
+                request.getCompany().getName() + " · " + request.getMachine().getAssetCode() + " — " + request.getTitle(),
+                "SERVICE_REQUEST",
+                request.getId(),
+                request.getRequestedAt()
+        );
+    }
+
+    private OperationalAlert overdueEtaAlert(ServiceRequest request) {
+        return new OperationalAlert(
+                "SERVICE_REQUEST:ETA:" + request.getId(),
+                AlertSeverity.CRITICAL,
+                "Previsão de atendimento vencida",
+                request.getCompany().getName() + " · " + request.getMachine().getAssetCode() + " — " + request.getTitle(),
+                "SERVICE_REQUEST",
+                request.getId(),
+                request.getEta()
+        );
+    }
+
+    private OperationalAlert pendingServiceApprovalAlert(ServiceRequest request) {
+        return new OperationalAlert(
+                "SERVICE_REQUEST:APPROVAL:" + request.getId(),
+                AlertSeverity.WARNING,
+                "Atendimento aguardando aprovação",
+                request.getMachine().getAssetCode() + " · " + request.getMachine().getName() + " — " + request.getTitle(),
+                "SERVICE_REQUEST",
+                request.getId(),
+                request.getCompletedAt() == null ? request.getRequestedAt() : request.getCompletedAt()
         );
     }
 
