@@ -1,16 +1,18 @@
 package com.linepulse.auth;
 
-import com.linepulse.audit.AuditService;
 import com.linepulse.common.ConflictException;
-import com.linepulse.common.NotFoundException;
+import com.linepulse.organization.CreateOrganizationMemberRequest;
+import com.linepulse.organization.OrganizationMemberService;
+import com.linepulse.organization.OrganizationMembership;
+import com.linepulse.organization.OrganizationMembershipRepository;
+import com.linepulse.organization.OrganizationRole;
 import com.linepulse.organization.OrganizationService;
-import java.time.Instant;
-import java.util.Comparator;
+import com.linepulse.organization.UpdateOrganizationMemberRoleRequest;
+import com.linepulse.organization.UpdateOrganizationMemberStatusRequest;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,22 +20,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminUserService {
     private static final Set<String> DEMO_REGISTRATIONS = Set.of("ADM001", "TEC001", "OPE001");
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final AuditService auditService;
     private final OrganizationService organizationService;
+    private final OrganizationMembershipRepository membershipRepository;
+    private final OrganizationMemberService organizationMemberService;
 
-    public AdminUserService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuditService auditService, OrganizationService organizationService) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.auditService = auditService;
+    public AdminUserService(
+            OrganizationService organizationService,
+            OrganizationMembershipRepository membershipRepository,
+            OrganizationMemberService organizationMemberService
+    ) {
         this.organizationService = organizationService;
+        this.membershipRepository = membershipRepository;
+        this.organizationMemberService = organizationMemberService;
     }
 
     @Transactional(readOnly = true)
     public List<AdminUserResponse> findAll() {
-        return userRepository.findAll().stream()
-                .sorted(Comparator.comparing(UserAccount::getName, String.CASE_INSENSITIVE_ORDER))
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return membershipRepository.findByOrganization_IdOrderByUser_NameAsc(organizationId).stream()
                 .map(AdminUserResponse::from)
                 .toList();
     }
@@ -41,67 +45,67 @@ public class AdminUserService {
     @Transactional
     public AdminUserResponse create(AdminCreateUserRequest request, String actorRegistration) {
         String registration = normalizeRegistration(request.registration());
-        if (userRepository.existsByRegistrationIgnoreCase(registration)) {
-            throw new ConflictException("Este cadastro de funcionário já está em uso.");
-        }
-
-        Instant now = Instant.now();
-        UserAccount saved = userRepository.save(new UserAccount(
-                UUID.randomUUID(),
-                request.name().trim(),
+        var created = organizationMemberService.create(new CreateOrganizationMemberRequest(
+                request.name(),
                 registration,
-                passwordEncoder.encode(request.password()),
-                request.role(),
-                true,
-                now,
-                now
+                request.password(),
+                organizationRoleFor(request.role())
         ));
-        organizationService.inheritPrimaryOrganization(actorRegistration, saved);
-        auditService.record("USER_CREATED", "USER", saved.getId(), "Usuário " + saved.getRegistration() + " criado como " + saved.getRole());
-        return AdminUserResponse.from(saved);
+        return findResponse(created.userId());
     }
 
     @Transactional
     public AdminUserResponse updateRole(UUID userId, UpdateUserRoleRequest request, String actorRegistration) {
-        UserAccount user = findUser(userId);
-        validateEditable(user, actorRegistration);
-        user.changeRole(request.role());
-        auditService.record("USER_ROLE_CHANGED", "USER", user.getId(), "Perfil do cadastro " + user.getRegistration() + " alterado para " + request.role());
-        return AdminUserResponse.from(user);
+        OrganizationMembership membership = findMembership(userId);
+        validateEditable(membership, actorRegistration);
+        organizationMemberService.changeRole(userId, new UpdateOrganizationMemberRoleRequest(organizationRoleFor(request.role())));
+        return findResponse(userId);
     }
 
     @Transactional
     public AdminUserResponse updateStatus(UUID userId, UpdateUserStatusRequest request, String actorRegistration) {
-        UserAccount user = findUser(userId);
-        validateEditable(user, actorRegistration);
-        user.changeActive(request.active());
-        auditService.record("USER_STATUS_CHANGED", "USER", user.getId(), "Cadastro " + user.getRegistration() + (request.active() ? " ativado" : " desativado"));
-        return AdminUserResponse.from(user);
+        OrganizationMembership membership = findMembership(userId);
+        validateEditable(membership, actorRegistration);
+        organizationMemberService.changeStatus(userId, new UpdateOrganizationMemberStatusRequest(request.active()));
+        return findResponse(userId);
     }
 
     @Transactional
     public void delete(UUID userId, String actorRegistration) {
-        UserAccount user = findUser(userId);
-        validateEditable(user, actorRegistration);
-        auditService.record("USER_DELETED", "USER", user.getId(), "Usuário " + user.getName() + " · cadastro " + user.getRegistration() + " excluído");
-        userRepository.delete(user);
+        OrganizationMembership membership = findMembership(userId);
+        validateEditable(membership, actorRegistration);
+        organizationMemberService.changeStatus(userId, new UpdateOrganizationMemberStatusRequest(false));
     }
 
-    private UserAccount findUser(UUID userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
+    private OrganizationMembership findMembership(UUID userId) {
+        UUID organizationId = organizationService.currentOrganization().getId();
+        return membershipRepository.findByOrganization_IdAndUser_Id(organizationId, userId)
+                .orElseThrow(() -> new com.linepulse.common.NotFoundException("Usuário não encontrado nesta organização."));
     }
 
-    private void validateEditable(UserAccount user, String actorRegistration) {
-        if (user.getRegistration().equalsIgnoreCase(actorRegistration)) {
-            throw new ConflictException("Você não pode alterar ou excluir o próprio acesso administrativo.");
+    private AdminUserResponse findResponse(UUID userId) {
+        return AdminUserResponse.from(findMembership(userId));
+    }
+
+    private void validateEditable(OrganizationMembership membership, String actorRegistration) {
+        String registration = membership.getUser().getRegistration();
+        if (registration.equalsIgnoreCase(actorRegistration)) {
+            throw new ConflictException("Você não pode alterar ou remover o próprio acesso administrativo.");
         }
-        if (DEMO_REGISTRATIONS.contains(user.getRegistration())) {
+        if (DEMO_REGISTRATIONS.contains(registration)) {
             throw new ConflictException("As contas demo possuem acesso fixo e não podem ser alteradas.");
         }
     }
 
     private String normalizeRegistration(String registration) {
         return registration.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private OrganizationRole organizationRoleFor(UserRole role) {
+        return switch (role) {
+            case ADMIN -> OrganizationRole.ADMIN;
+            case TECHNICIAN -> OrganizationRole.TECHNICIAN;
+            case OPERATOR -> OrganizationRole.OPERATOR;
+        };
     }
 }

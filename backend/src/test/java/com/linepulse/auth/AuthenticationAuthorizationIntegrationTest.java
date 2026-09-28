@@ -172,7 +172,8 @@ class AuthenticationAuthorizationIntegrationTest {
     }
 
     @Test
-    void shouldAllowAdminToPromoteARegularUser() throws Exception {
+    void shouldAllowAdminToPromoteARegularUserInTheSameOrganization() throws Exception {
+        login("OP1001", "TestPass123!");
         String adminToken = login("ADM1001", "TestPass123!");
         UserAccount operator = userRepository.findByRegistrationIgnoreCase("OP1001").orElseThrow();
 
