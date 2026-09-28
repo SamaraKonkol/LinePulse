@@ -3,7 +3,7 @@ import { Building2, Clock3, Network, UserCog, Wrench } from 'lucide-react';
 import { FormEvent, useMemo, useState } from 'react';
 import type { Incident, Machine } from './types/api';
 import type { OrganizationRole, ProviderOnboardingInput, ServiceRequestChannel, ServiceRequestPriority } from './types/serviceNetwork';
-import { acceptServiceRequest, approveServiceRequest, assignServiceRequest, cancelServiceRequest, completeServiceRequest, createOrganizationMember, createServiceRequest, declineServiceRequest, getCurrentOrganization, getMyOrganizations, getOrganizationMembers, getProviderRelationships, getProviders, getServiceRequests, markServiceRequestEnRoute, onboardProvider, setActiveOrganization, startServiceRequest, suspendProviderRelationship, trustProvider, updateServiceRequestEta } from './services/serviceNetworkApi';
+import { acceptServiceRequest, approveServiceRequest, assignServiceRequest, cancelServiceRequest, completeServiceRequest, createOrganizationMember, createServiceRequest, declineServiceRequest, getCurrentOrganization, getMyOrganizations, getOrganizationMembers, getProviderRelationships, getProviders, getServiceRequests, markServiceRequestEnRoute, onboardProvider, setActiveOrganization, startServiceRequest, suspendProviderRelationship, trustProvider, updateOrganizationMemberRole, updateOrganizationMemberStatus, updateServiceRequestEta } from './services/serviceNetworkApi';
 import { getApiErrorMessage } from './utils/apiError';
 import './service-network.css';
 
@@ -21,7 +21,7 @@ function ServiceNetworkPanel({ machines, incidents }: Props) {
   const queryClient = useQueryClient();
   const [selectedTechnician, setSelectedTechnician] = useState<Record<string, string>>({});
   const [requestDraft, setRequestDraft] = useState({ machineId: '', incidentId: '', title: '', description: '', channel: 'INTERNAL' as ServiceRequestChannel, priority: 'MEDIUM' as ServiceRequestPriority, providerOrganizationId: '' });
-  const [memberDraft, setMemberDraft] = useState({ name: '', registration: '', password: '', role: 'MECHANIC' as OrganizationRole });
+  const [memberDraft, setMemberDraft] = useState({ name: '', registration: '', password: '', role: 'TECHNICIAN' as OrganizationRole });
   const [providerDraft, setProviderDraft] = useState<ProviderOnboardingInput>({ name: '', slug: '', ownerName: '', ownerRegistration: '', ownerPassword: '' });
   const [providerToTrust, setProviderToTrust] = useState('');
 
@@ -42,6 +42,12 @@ function ServiceNetworkPanel({ machines, incidents }: Props) {
   const linkedProviderIds = new Set((relationshipsQuery.data ?? []).map((item) => item.providerOrganizationId));
   const unlinkedProviders = (providersQuery.data ?? []).filter((provider) => !linkedProviderIds.has(provider.id));
   const selectedMachineIncidents = useMemo(() => incidents.filter((incident) => incident.machineId === requestDraft.machineId), [incidents, requestDraft.machineId]);
+  const memberRoleOptions = useMemo<OrganizationRole[]>(() => {
+    const base: OrganizationRole[] = current?.type === 'SERVICE_PROVIDER'
+      ? ['ADMIN', 'TECHNICIAN', 'MECHANIC']
+      : ['ADMIN', 'TECHNICIAN', 'OPERATOR'];
+    return current?.role === 'OWNER' ? ['OWNER', ...base] : base;
+  }, [current?.role, current?.type]);
 
   const refreshNetwork = async () => {
     await Promise.all([
@@ -172,12 +178,32 @@ function ServiceNetworkPanel({ machines, incidents }: Props) {
       {canAdminOrganization && (
         <div className="service-admin-grid">
           <form className="service-form compact-service-form" onSubmit={(event) => { event.preventDefault(); memberMutation.mutate(memberDraft); }}>
-            <div className="service-section-title"><UserCog size={18} /><div><strong>Equipe do workspace</strong><small>Cadastre técnicos/mecânicos dentro desta organização.</small></div></div>
+            <div className="service-section-title"><UserCog size={18} /><div><strong>Equipe do workspace</strong><small>Cadastre e gerencie os papéis desta organização.</small></div></div>
             <label>Nome<input value={memberDraft.name} onChange={(event) => setMemberDraft((draft) => ({ ...draft, name: event.target.value }))} required /></label>
             <label>Cadastro<input value={memberDraft.registration} onChange={(event) => setMemberDraft((draft) => ({ ...draft, registration: event.target.value }))} required /></label>
             <label>Senha inicial<input type="password" minLength={8} value={memberDraft.password} onChange={(event) => setMemberDraft((draft) => ({ ...draft, password: event.target.value }))} required /></label>
-            <label>Papel<select value={memberDraft.role} onChange={(event) => setMemberDraft((draft) => ({ ...draft, role: event.target.value as OrganizationRole }))}>{current?.type === 'SERVICE_PROVIDER' ? <><option value="MECHANIC">Mecânico</option><option value="TECHNICIAN">Técnico</option><option value="ADMIN">Administrador</option></> : <><option value="TECHNICIAN">Técnico</option><option value="OPERATOR">Operador</option><option value="ADMIN">Administrador</option></>}</select></label>
+            <label>Papel<select value={memberDraft.role} onChange={(event) => setMemberDraft((draft) => ({ ...draft, role: event.target.value as OrganizationRole }))}>{memberRoleOptions.map((role) => <option value={role} key={role}>{roleLabel[role]}</option>)}</select></label>
             <button className="secondary-button" type="submit" disabled={memberMutation.isPending}>Adicionar membro</button>
+
+            <div className="member-management-list">
+              <div className="member-management-heading"><strong>Membros atuais</strong><small>{membersQuery.data?.length ?? 0} cadastrados</small></div>
+              {(membersQuery.data ?? []).length === 0 && !membersQuery.isLoading && <div className="empty-state compact-empty-state">Nenhum membro cadastrado.</div>}
+              {(membersQuery.data ?? []).map((member) => {
+                const ownerProtectedFromAdmin = current?.role !== 'OWNER' && member.role === 'OWNER';
+                const allowedRoles = current?.role === 'OWNER'
+                  ? (current.type === 'SERVICE_PROVIDER' ? ['OWNER', 'ADMIN', 'TECHNICIAN', 'MECHANIC'] : ['OWNER', 'ADMIN', 'TECHNICIAN', 'OPERATOR']) as OrganizationRole[]
+                  : memberRoleOptions;
+                return <div className={`member-management-row${member.active ? '' : ' inactive-member'}`} key={member.membershipId}>
+                  <div className="member-identity"><strong>{member.name}</strong><small>{member.registration} · {member.active ? 'Ativo' : 'Inativo'}</small></div>
+                  <select aria-label={`Papel de ${member.name}`} value={member.role} disabled={ownerProtectedFromAdmin || actionMutation.isPending} onChange={(event) => actionMutation.mutate(() => updateOrganizationMemberRole(member.userId, event.target.value as OrganizationRole))}>
+                    {allowedRoles.map((role) => <option value={role} key={role}>{roleLabel[role]}</option>)}
+                    {!allowedRoles.includes(member.role) && <option value={member.role}>{roleLabel[member.role]}</option>}
+                  </select>
+                  <button type="button" className="text-button" disabled={ownerProtectedFromAdmin || actionMutation.isPending} onClick={() => actionMutation.mutate(() => updateOrganizationMemberStatus(member.userId, !member.active))}>{member.active ? 'Desativar' : 'Reativar'}</button>
+                </div>;
+              })}
+              {current?.role === 'OWNER' && <small className="ownership-hint">A organização sempre precisa manter pelo menos um Proprietário ativo.</small>}
+            </div>
           </form>
 
           {isCompany && <div className="service-form compact-service-form">
