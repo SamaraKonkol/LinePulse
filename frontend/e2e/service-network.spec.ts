@@ -86,7 +86,7 @@ test('company owner sees the V3 service-request workspace', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Rede de serviços' })).toBeVisible();
   await expect(page.getByText('Novo chamado', { exact: true })).toBeVisible();
   await expect(page.getByText('Chamados da empresa', { exact: true })).toBeVisible();
-  await expect(page.getByText('Fábrica E2E · Empresa', { exact: true })).toBeVisible();
+  await expect(page.locator('.workspace-selector select')).toHaveValue(company.id);
 });
 
 test('provider sees routed calls and every authenticated request carries the active organization header', async ({ page }) => {
