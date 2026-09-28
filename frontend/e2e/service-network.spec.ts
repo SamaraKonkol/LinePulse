@@ -30,6 +30,11 @@ const emptyPage = {
   last: true,
 };
 
+const companyMembers = [
+  { membershipId: 1, userId: 'owner-1', name: 'Owner E2E', registration: 'OWN001', role: 'OWNER', active: true },
+  { membershipId: 2, userId: 'tech-1', name: 'Técnico E2E', registration: 'TEC001', role: 'TECHNICIAN', active: true },
+];
+
 async function installSession(page: Page, user: { id: string; name: string; registration: string; role: 'ADMIN' | 'TECHNICIAN' | 'OPERATOR' }, organizationId?: string) {
   await page.addInitScript(({ authKey, orgKey, userData, activeOrganization }) => {
     localStorage.setItem(authKey, JSON.stringify({ token: 'e2e-token', user: userData }));
@@ -37,13 +42,28 @@ async function installSession(page: Page, user: { id: string; name: string; regi
   }, { authKey: authStorageKey, orgKey: organizationStorageKey, userData: user, activeOrganization: organizationId });
 }
 
-async function mockCommonApi(page: Page, currentOrganization: typeof company | typeof provider, requests = emptyPage, seenOrganizationHeaders: string[] = []) {
+async function mockCommonApi(
+  page: Page,
+  currentOrganization: typeof company | typeof provider,
+  requests = emptyPage,
+  seenOrganizationHeaders: string[] = [],
+  organizationMembers: unknown[] = [],
+  memberMutationPaths: string[] = [],
+) {
   await page.route(`${apiBase}/**`, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname.replace('/api', '');
     const organizationHeader = request.headers()['x-linepulse-organization'];
     if (organizationHeader) seenOrganizationHeaders.push(organizationHeader);
+
+    if (request.method() === 'PATCH' && path.startsWith('/organization-members/')) {
+      memberMutationPaths.push(path);
+      const userId = path.split('/')[2];
+      const member = organizationMembers.find((candidate) => typeof candidate === 'object' && candidate !== null && 'userId' in candidate && candidate.userId === userId) ?? {};
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(member) });
+      return;
+    }
 
     const commonResponses: Record<string, unknown> = {
       '/dashboard': { totalMachines: 0, activeMachines: 0, openIncidents: 0, activeWorkOrders: 0, availabilityPercentage: 100, mttrMinutes: 0 },
@@ -65,7 +85,7 @@ async function mockCommonApi(page: Page, currentOrganization: typeof company | t
       '/service-requests': requests,
       '/provider-network/providers': [],
       '/provider-network/relationships': [],
-      '/organization-members': [],
+      '/organization-members': organizationMembers,
     };
 
     if (path in commonResponses) {
@@ -143,4 +163,25 @@ test('provider sees routed calls and every authenticated request carries the act
 
   await expect.poll(() => seenOrganizationHeaders.length).toBeGreaterThan(0);
   expect(new Set(seenOrganizationHeaders)).toEqual(new Set([provider.id]));
+});
+
+test('company owner can manage team roles and membership status from the V3 workspace', async ({ page }) => {
+  const memberMutationPaths: string[] = [];
+  await installSession(page, { id: 'owner-1', name: 'Owner E2E', registration: 'OWN001', role: 'ADMIN' }, company.id);
+  await mockCommonApi(page, company, emptyPage, [], companyMembers, memberMutationPaths);
+
+  await page.goto('/LinePulse/');
+
+  await expect(page.getByText('Membros atuais', { exact: true })).toBeVisible();
+  await expect(page.getByText('Owner E2E', { exact: true })).toBeVisible();
+  await expect(page.getByText('Técnico E2E', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Papel de Owner E2E')).toHaveValue('OWNER');
+  await expect(page.getByLabel('Papel de Técnico E2E')).toHaveValue('TECHNICIAN');
+
+  await page.getByLabel('Papel de Técnico E2E').selectOption('ADMIN');
+  await expect.poll(() => memberMutationPaths.includes('/organization-members/tech-1/role')).toBeTruthy();
+
+  const technicianRow = page.locator('.member-management-row').filter({ hasText: 'Técnico E2E' });
+  await technicianRow.getByRole('button', { name: 'Desativar' }).click();
+  await expect.poll(() => memberMutationPaths.includes('/organization-members/tech-1/status')).toBeTruthy();
 });
