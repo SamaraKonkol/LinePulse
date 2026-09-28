@@ -9,6 +9,7 @@ import com.linepulse.common.NotFoundException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +48,9 @@ public class OrganizationMemberService {
     public OrganizationMemberResponse create(CreateOrganizationMemberRequest request) {
         var actor = accessService.requireCurrentRole(OrganizationRole.OWNER, OrganizationRole.ADMIN);
         Organization organization = actor.getOrganization();
+        if (request.role() == OrganizationRole.OWNER && actor.getRole() != OrganizationRole.OWNER) {
+            throw new AccessDeniedException("Apenas um OWNER pode conceder propriedade da organização.");
+        }
         if (userRepository.existsByRegistrationIgnoreCase(request.registration())) {
             throw new ConflictException("Já existe uma conta com este cadastro.");
         }
@@ -64,6 +68,7 @@ public class OrganizationMemberService {
     public OrganizationMemberResponse changeRole(UUID userId, UpdateOrganizationMemberRoleRequest request) {
         var actor = accessService.requireCurrentRole(OrganizationRole.OWNER, OrganizationRole.ADMIN);
         OrganizationMembership membership = findMembership(actor.getOrganization().getId(), userId);
+        ensureOwnerManagementAllowed(actor, membership, request.role());
         ensureOrganizationKeepsActiveOwner(actor.getOrganization().getId(), membership, request.role(), membership.isActive());
         membership.changeRole(request.role());
         membership.getUser().changeRole(globalRoleFor(actor.getOrganization(), request.role()));
@@ -77,11 +82,21 @@ public class OrganizationMemberService {
     public OrganizationMemberResponse changeStatus(UUID userId, UpdateOrganizationMemberStatusRequest request) {
         var actor = accessService.requireCurrentRole(OrganizationRole.OWNER, OrganizationRole.ADMIN);
         OrganizationMembership membership = findMembership(actor.getOrganization().getId(), userId);
+        if (membership.getRole() == OrganizationRole.OWNER && actor.getRole() != OrganizationRole.OWNER) {
+            throw new AccessDeniedException("Apenas um OWNER pode alterar o status de outro OWNER.");
+        }
         ensureOrganizationKeepsActiveOwner(actor.getOrganization().getId(), membership, membership.getRole(), request.active());
         membership.changeActive(request.active());
         OrganizationMembership saved = membershipRepository.save(membership);
         auditService.recordForOrganization(actor.getOrganization(), "ORGANIZATION_MEMBER_STATUS_CHANGED", "USER", userId, "Membro " + saved.getUser().getRegistration() + (request.active() ? " ativado" : " desativado"));
         return OrganizationMemberResponse.from(saved);
+    }
+
+    private void ensureOwnerManagementAllowed(OrganizationMembership actor, OrganizationMembership target, OrganizationRole resultingRole) {
+        boolean touchesOwnership = target.getRole() == OrganizationRole.OWNER || resultingRole == OrganizationRole.OWNER;
+        if (touchesOwnership && actor.getRole() != OrganizationRole.OWNER) {
+            throw new AccessDeniedException("Apenas um OWNER pode conceder ou remover propriedade da organização.");
+        }
     }
 
     private void ensureOrganizationKeepsActiveOwner(UUID organizationId, OrganizationMembership membership, OrganizationRole resultingRole, boolean resultingActive) {
