@@ -2,6 +2,7 @@ package com.linepulse.organization;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -18,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 class OrganizationMemberServiceTest {
@@ -79,7 +81,7 @@ class OrganizationMemberServiceTest {
         );
 
         assertEquals("A organização precisa manter pelo menos um OWNER ativo.", error.getMessage());
-        assertEquals(true, ownerMembership.isActive());
+        assertTrue(ownerMembership.isActive());
         verify(membershipRepository, never()).save(any(OrganizationMembership.class));
     }
 
@@ -95,5 +97,40 @@ class OrganizationMemberServiceTest {
         assertEquals(OrganizationRole.ADMIN, response.role());
         assertEquals(OrganizationRole.ADMIN, ownerMembership.getRole());
         verify(membershipRepository).save(ownerMembership);
+    }
+
+    @Test
+    void shouldRejectAdminPromotingThemselfToOwner() {
+        Instant now = Instant.now();
+        UserAccount adminUser = new UserAccount(UUID.randomUUID(), "Admin Teste", "ADM9001", "hash", UserRole.ADMIN, true, now, now);
+        OrganizationMembership adminMembership = new OrganizationMembership(organization, adminUser, OrganizationRole.ADMIN, true, now);
+        when(accessService.requireCurrentRole(OrganizationRole.OWNER, OrganizationRole.ADMIN)).thenReturn(adminMembership);
+        when(membershipRepository.findByOrganization_IdAndUser_Id(organization.getId(), adminUser.getId())).thenReturn(Optional.of(adminMembership));
+
+        AccessDeniedException error = assertThrows(
+                AccessDeniedException.class,
+                () -> service.changeRole(adminUser.getId(), new UpdateOrganizationMemberRoleRequest(OrganizationRole.OWNER))
+        );
+
+        assertEquals("Apenas um OWNER pode conceder ou remover propriedade da organização.", error.getMessage());
+        assertEquals(OrganizationRole.ADMIN, adminMembership.getRole());
+        verify(membershipRepository, never()).save(adminMembership);
+    }
+
+    @Test
+    void shouldRejectAdminDeactivatingAnOwner() {
+        Instant now = Instant.now();
+        UserAccount adminUser = new UserAccount(UUID.randomUUID(), "Admin Teste", "ADM9002", "hash", UserRole.ADMIN, true, now, now);
+        OrganizationMembership adminMembership = new OrganizationMembership(organization, adminUser, OrganizationRole.ADMIN, true, now);
+        when(accessService.requireCurrentRole(OrganizationRole.OWNER, OrganizationRole.ADMIN)).thenReturn(adminMembership);
+
+        AccessDeniedException error = assertThrows(
+                AccessDeniedException.class,
+                () -> service.changeStatus(ownerUser.getId(), new UpdateOrganizationMemberStatusRequest(false))
+        );
+
+        assertEquals("Apenas um OWNER pode alterar o status de outro OWNER.", error.getMessage());
+        assertTrue(ownerMembership.isActive());
+        verify(membershipRepository, never()).save(ownerMembership);
     }
 }
