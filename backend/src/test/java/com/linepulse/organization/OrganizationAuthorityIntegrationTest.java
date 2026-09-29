@@ -1,6 +1,7 @@
 package com.linepulse.organization;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -82,6 +83,22 @@ class OrganizationAuthorityIntegrationTest {
                         .header(OrganizationService.ORGANIZATION_HEADER, UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Tentativa indevida\",\"code\":\"NOPE\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldRejectUnknownWorkspaceForReadsAndInvitationsInsteadOfUsingPrimaryOrganization() throws Exception {
+        String token = login();
+        String unknown = UUID.randomUUID().toString();
+        for (String endpoint : java.util.List.of("/api/organizations/current", "/api/machines", "/api/organization-members")) {
+            mockMvc.perform(get(endpoint).header("Authorization", "Bearer " + token)
+                    .header(OrganizationService.ORGANIZATION_HEADER, unknown))
+                    .andExpect(status().isForbidden());
+        }
+        mockMvc.perform(post("/api/organization-members/invitations")
+                .header("Authorization", "Bearer " + token).header(OrganizationService.ORGANIZATION_HEADER, unknown)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Pessoa\",\"registration\":\"NOPE\",\"email\":\"nope@example.test\",\"role\":\"TECHNICIAN\"}"))
                 .andExpect(status().isForbidden());
     }
 

@@ -27,6 +27,9 @@ public class UserAccount {
     private boolean active;
     private Instant createdAt;
     private Instant updatedAt;
+    private Instant credentialsChangedAt;
+
+    public Instant getCredentialsChangedAt() { return credentialsChangedAt; }
 
     protected UserAccount() {
     }

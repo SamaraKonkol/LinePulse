@@ -37,8 +37,8 @@ const companyMembers = [
 
 async function installSession(page: Page, user: { id: string; name: string; registration: string; role: 'ADMIN' | 'TECHNICIAN' | 'OPERATOR' }, organizationId?: string) {
   await page.addInitScript(({ authKey, orgKey, userData, activeOrganization }) => {
-    localStorage.setItem(authKey, JSON.stringify({ token: 'e2e-token', user: userData }));
-    if (activeOrganization) localStorage.setItem(orgKey, activeOrganization);
+    if (!localStorage.getItem(authKey)) localStorage.setItem(authKey, JSON.stringify({ token: 'e2e-token', user: userData }));
+    if (activeOrganization && !localStorage.getItem(orgKey)) localStorage.setItem(orgKey, activeOrganization);
   }, { authKey: authStorageKey, orgKey: organizationStorageKey, userData: user, activeOrganization: organizationId });
 }
 
@@ -185,4 +185,53 @@ test('company owner can manage team roles and membership status from the V3 work
   const technicianRow = serviceNetwork.locator('.member-management-row').filter({ hasText: 'Técnico E2E' });
   await technicianRow.getByRole('button', { name: 'Desativar' }).click();
   await expect.poll(() => memberMutationPaths.includes('/organization-members/tech-1/status')).toBeTruthy();
+});
+
+for (const scenario of [
+  { global: 'ADMIN' as const, local: 'OPERATOR', admin: false },
+  { global: 'OPERATOR' as const, local: 'OWNER', admin: true },
+  { global: 'ADMIN' as const, local: 'TECHNICIAN', admin: false },
+]) {
+  test(`workspace ${scenario.local} overrides global ${scenario.global}`, async ({ page }) => {
+    await installSession(page, { id: 'mixed', name: 'Mixed', registration: 'MIX001', role: scenario.global }, company.id);
+    await mockCommonApi(page, { ...company, role: scenario.local });
+    await page.goto('/LinePulse/');
+    await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Administração' })).toHaveCount(scenario.admin ? 1 : 0);
+    await expect(page.getByRole('button', { name: 'Nova ordem', exact: true })).toHaveCount(scenario.local === 'OPERATOR' ? 0 : 1);
+    await expect(page.locator('.sidebar-user')).toContainText(scenario.local === 'OWNER' ? 'Proprietário' : scenario.local === 'TECHNICIAN' ? 'Técnico' : 'Operador');
+  });
+}
+
+test('failed workspace resolution never falls back to global admin privileges', async ({ page }) => {
+  await installSession(page, { id: 'mixed', name: 'Mixed', registration: 'MIX001', role: 'ADMIN' });
+  await page.route(`${apiBase}/**`, route => route.fulfill({ status: 403, json: { message: 'Workspace indisponível' } }));
+  await page.goto('/LinePulse/');
+  await expect(page.getByRole('button', { name: 'Tentar novamente' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Administração' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Visão geral' })).toHaveCount(0);
+});
+
+test('switching organizations removes privileged controls and sends the new tenant header', async ({ page }) => {
+  const operatorCompany = { ...company, id: '55555555-5555-5555-5555-555555555555', name: 'Empresa Operador', role: 'OPERATOR' };
+  await installSession(page, { id: 'mixed', name: 'Mixed', registration: 'MIX001', role: 'ADMIN' }, company.id);
+  await mockCommonApi(page, company);
+  const forbiddenRequests: string[] = [];
+  await page.route(`${apiBase}/**`, async route => {
+    const path = new URL(route.request().url()).pathname.replace('/api', '');
+    const tenant = route.request().headers()['x-linepulse-organization'];
+    if (path === '/organizations/my') { await route.fulfill({ json: [company, operatorCompany] }); return; }
+    if (path === '/organizations/current') { await route.fulfill({ json: tenant === operatorCompany.id ? operatorCompany : company }); return; }
+    if (tenant === operatorCompany.id && (path.startsWith('/admin/') || path === '/audit-events')) forbiddenRequests.push(path);
+    await route.fallback();
+  });
+  await page.goto('/LinePulse/');
+  await expect(page.getByRole('link', { name: 'Administração' })).toBeVisible();
+  await page.locator('.workspace-selector select').selectOption(operatorCompany.id);
+  await expect(page.locator('.workspace-selector select')).toHaveValue(operatorCompany.id);
+  await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Administração' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Nova ordem', exact: true })).toHaveCount(0);
+  await expect(page.locator('.sidebar-user')).toContainText('Operador');
+  expect(forbiddenRequests).toEqual([]);
 });

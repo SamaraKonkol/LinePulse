@@ -32,9 +32,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            String registration = jwtService.parse(header.substring(7)).getSubject();
+            var claims = jwtService.parse(header.substring(7));
+            String registration = claims.getSubject();
             userRepository.findByRegistrationIgnoreCase(registration)
                     .filter(UserAccount::isActive)
+                    .filter(user -> user.getCredentialsChangedAt() == null || user.getCredentialsChangedAt().toString().equals(claims.get("credentialsVersion", String.class)))
                     .ifPresent(user -> {
                         var authentication = new UsernamePasswordAuthenticationToken(
                                 user.getRegistration(),

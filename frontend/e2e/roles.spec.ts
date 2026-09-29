@@ -6,6 +6,13 @@ async function mockApi(page: Parameters<typeof test>[0]['page']) {
     const url = new URL(request.url());
     const path = url.pathname.replace('/api', '');
 
+    if (path === '/organizations/current' || path === '/organizations/my') {
+      const session = await page.evaluate(() => JSON.parse(localStorage.getItem('linepulse-auth-v2') ?? '{}'));
+      const organization = { id: 'company-e2e', name: 'Empresa E2E', type: 'COMPANY', role: session.user?.role ?? 'OPERATOR' };
+      await route.fulfill({ json: path.endsWith('/my') ? [organization] : organization });
+      return;
+    }
+
     if (path === '/auth/login' && request.method() === 'POST') {
       const body = request.postDataJSON() as { registration: string };
       const role = body.registration === 'ADM001' ? 'ADMIN' : body.registration === 'TEC001' ? 'TECHNICIAN' : 'OPERATOR';

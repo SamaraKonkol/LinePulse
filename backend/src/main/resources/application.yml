@@ -24,3 +24,8 @@ app:
   demo-users:
     enabled: ${DEMO_USERS_ENABLED:false}
     password: ${DEMO_USERS_PASSWORD:LinePulse123!}
+
+  account-mail:
+    resend-api-key: ${RESEND_API_KEY:}
+    from: ${MAIL_FROM:}
+    frontend-url: ${FRONTEND_URL:http://localhost:5173/LinePulse/}

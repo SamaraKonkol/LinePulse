@@ -1,5 +1,4 @@
 import { BarChart3, Gauge, TriangleAlert } from 'lucide-react';
-import ServiceNetworkPanel from './ServiceNetworkPanel';
 import type { Downtime, Incident, Machine, WorkOrder } from './types/api';
 import './operational-insights.css';
 
@@ -57,7 +56,6 @@ function OperationalInsightsPanel({ machines, incidents, orders, downtimes, onSe
 
   return (
     <>
-      <ServiceNetworkPanel machines={machines} incidents={incidents} />
       <section className="panel insights-panel" id="insights">
         <div className="panel-heading">
           <div><span className="eyebrow">Análise operacional</span><h2>Indicadores por linha e ativo</h2></div>
