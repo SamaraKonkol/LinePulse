@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import AccountAccessPage from './AccountAccessPage';
 import BrandLogo from './brand/BrandLogo';
 import { login, storeAuth } from './services/api';
 import type { AuthResponse } from './types/api';
@@ -14,6 +15,8 @@ const demoAccounts = [
 ];
 
 function LoginPage({ onAuthenticated }: Props) {
+  const [recover, setRecover] = useState(false);
+  const [accountToken, setAccountToken] = useState(() => window.location.hash.startsWith('#account-token=') ? window.location.hash.slice(15) : '');
   const [registration, setRegistration] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -38,6 +41,8 @@ function LoginPage({ onAuthenticated }: Props) {
     }
   }
 
+  if (recover || accountToken) return <AccountAccessPage token={accountToken || undefined} onBack={() => { setRecover(false); setAccountToken(''); window.history.replaceState(null, '', window.location.pathname + window.location.search); }} />;
+
   return (
     <main className="auth-shell">
       <section className="auth-intro">
@@ -55,7 +60,7 @@ function LoginPage({ onAuthenticated }: Props) {
         <div className="auth-card">
           <span className="eyebrow">Acesso ao sistema</span>
           <h2>Entrar no LinePulse</h2>
-          <p>Use o cadastro e a senha fornecidos pelo administrador da operação.</p>
+          <p>Use seu cadastro e a senha definida no convite por e-mail.</p>
 
           {import.meta.env.DEV && <div className="demo-access">
             <span>Perfis demo locais</span>
@@ -84,6 +89,7 @@ function LoginPage({ onAuthenticated }: Props) {
               {loading ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
+          <button type="button" className="text-button" onClick={() => setRecover(true)}>Esqueci minha senha</button>
         </div>
       </section>
     </main>

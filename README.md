@@ -71,6 +71,7 @@ The V3 authorization model adds an organization boundary to requests. A user can
 - [Multi-organization service network](docs/multi-organization-service-network.md)
 - [V3 provider service network](docs/v3-provider-service-network.md)
 - [Production deployment](docs/deployment.md)
+- [V3 release validation and email onboarding](docs/v3-release-validation.md)
 
 ## Organization model
 

@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Activity, AlertTriangle, Factory, LogOut, Repeat2, Timer, Wrench } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import AdminPanel from './AdminPanel';
+import ServiceNetworkPanel from './ServiceNetworkPanel';
+import { getCurrentOrganization, setActiveOrganization } from './services/serviceNetworkApi';
+import type { OrganizationSummary } from './types/serviceNetwork';
 import AlertPanel from './AlertPanel';
 import AuditPanel from './AuditPanel';
 import DowntimeModal from './DowntimeModal';
@@ -28,10 +31,10 @@ const priorityMeta: Record<IncidentPriority | WorkOrderPriority, { label: string
   LOW: { label: 'Baixa', className: 'neutral' },
 };
 
-const roleLabel = { ADMIN: 'Administrador', TECHNICIAN: 'Técnico', OPERATOR: 'Operador' };
+const roleLabel = { OWNER: 'Proprietário', ADMIN: 'Administrador', TECHNICIAN: 'Técnico', OPERATOR: 'Operador', MECHANIC: 'Mecânico' };
 const maintenanceTypeLabel = { CORRECTIVE: 'Corretiva', PREVENTIVE: 'Preventiva', INSPECTION: 'Inspeção' };
 
-function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; onLogout: () => void; onSwitchAccount: () => void }) {
+function Dashboard({ auth, organization, onLogout, onSwitchAccount }: { auth: AuthResponse; organization: OrganizationSummary; onLogout: () => void; onSwitchAccount: () => void }) {
   const queryClient = useQueryClient();
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showIncidentModal, setShowIncidentModal] = useState(false);
@@ -41,8 +44,9 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
   const [showDowntimeModal, setShowDowntimeModal] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   const [incidentToResolve, setIncidentToResolve] = useState<Incident | null>(null);
-  const isAdmin = auth.user.role === 'ADMIN';
-  const canManageOperations = isAdmin || auth.user.role === 'TECHNICIAN';
+  const isCompany = organization.type === 'COMPANY';
+  const isAdmin = isCompany && ['OWNER', 'ADMIN'].includes(organization.role);
+  const canManageOperations = isCompany && ['OWNER', 'ADMIN', 'TECHNICIAN', 'MECHANIC'].includes(organization.role);
   const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: getDashboardMetrics });
   const trendQuery = useQuery({ queryKey: ['incident-trend'], queryFn: getIncidentTrend });
   const alertsQuery = useQuery({ queryKey: ['alerts'], queryFn: getAlerts, refetchInterval: 30_000 });
@@ -153,7 +157,7 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
           <button type="button" className="account-menu-trigger" onClick={() => setShowAccountMenu((open) => !open)} aria-expanded={showAccountMenu} aria-haspopup="menu" title="Conta"><span className="brand-mark">LP</span></button>
           {showAccountMenu && (
             <div className="account-menu-popover" role="menu">
-              <div className="account-menu-user"><strong>{auth.user.name}</strong><span>{roleLabel[auth.user.role]}</span></div>
+              <div className="account-menu-user"><strong>{auth.user.name}</strong><span>{roleLabel[organization.role]}</span></div>
               <button type="button" role="menuitem" onClick={() => leaveSession(onSwitchAccount)}><Repeat2 size={16} />Trocar conta</button>
               <button type="button" role="menuitem" className="account-menu-logout" onClick={() => leaveSession(onLogout)}><LogOut size={16} />Sair</button>
             </div>
@@ -166,13 +170,13 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
           <a className="nav-item" href="#maintenance">Manutenção</a>
           {isAdmin && <a className="nav-item admin-nav-item" href="#admin">Administração</a>}
         </nav>
-        <div className="sidebar-user"><strong>{auth.user.name}</strong><span>{roleLabel[auth.user.role]}</span></div>
+        <div className="sidebar-user"><strong>{auth.user.name}</strong><span>{roleLabel[organization.role]}</span></div>
       </aside>
 
       <section className="content" id="dashboard">
         <header className="page-header">
           <div><span className="eyebrow">Operações industriais</span><h1>Visão geral</h1><p>Acompanhe disponibilidade, ocorrências e manutenção da planta.</p></div>
-          <button className="primary-button" onClick={() => setShowIncidentModal(true)} disabled={machinesQuery.isLoading || machines.length === 0}>Nova ocorrência</button>
+          {isCompany && <button className="primary-button" onClick={() => setShowIncidentModal(true)} disabled={machinesQuery.isLoading || machines.length === 0}>Nova ocorrência</button>}
         </header>
 
         {connectionError && <div className="connection-banner">{getApiErrorMessage(connectionError, 'Não foi possível carregar todos os dados da API.')}</div>}
@@ -184,6 +188,7 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
           ))}
         </div>
 
+        <ServiceNetworkPanel machines={machines} incidents={incidents} />
         <AlertPanel alerts={alertsQuery.data ?? []} loading={alertsQuery.isLoading} />
         <IncidentTrendChart data={trendQuery.data ?? []} loading={trendQuery.isLoading} />
 
@@ -238,7 +243,7 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
         {isAdmin && <AdminPanel currentUserId={auth.user.id} machines={machines} />}
       </section>
 
-      {showIncidentModal && <IncidentModal machines={machines.filter((machine) => machine.status !== 'INACTIVE')} loading={createIncidentMutation.isPending} onClose={() => setShowIncidentModal(false)} onSubmit={(draft) => createIncidentMutation.mutate(draft)} />}
+      {isCompany && showIncidentModal && <IncidentModal machines={machines.filter((machine) => machine.status !== 'INACTIVE')} loading={createIncidentMutation.isPending} onClose={() => setShowIncidentModal(false)} onSubmit={(draft) => createIncidentMutation.mutate(draft)} />}
       {incidentToResolve && canManageOperations && <ResolveIncidentModal incident={incidentToResolve} loading={resolveIncidentMutation.isPending} onClose={() => setIncidentToResolve(null)} onSubmit={(input) => resolveIncidentMutation.mutate({ id: incidentToResolve.id, input })} />}
       {showWorkOrderModal && canManageOperations && <WorkOrderModal machines={machines.filter((machine) => machine.status !== 'INACTIVE')} loading={createWorkOrderMutation.isPending} onClose={() => setShowWorkOrderModal(false)} onSubmit={(draft) => createWorkOrderMutation.mutate(draft)} />}
       {showDowntimeModal && canManageOperations && <DowntimeModal machines={machines.filter((machine) => machine.status !== 'INACTIVE')} loading={createDowntimeMutation.isPending} onClose={() => setShowDowntimeModal(false)} onSubmit={(draft) => createDowntimeMutation.mutate(draft)} />}
@@ -247,12 +252,30 @@ function Dashboard({ auth, onLogout, onSwitchAccount }: { auth: AuthResponse; on
   );
 }
 
+function Workspace({ auth, onLogout }: { auth: AuthResponse; onLogout: () => void }) {
+  const organizationQuery = useQuery({
+    queryKey: ['organization-current'],
+    queryFn: async () => {
+      const organization = await getCurrentOrganization();
+      setActiveOrganization(organization.id);
+      return organization;
+    },
+    retry: false,
+  });
+  if (!organizationQuery.data) return <main className="app-shell"><section className="content">
+    <p>{organizationQuery.isPending ? 'Carregando workspace...' : getApiErrorMessage(organizationQuery.error, 'Não foi possível acessar o workspace.')}</p>
+    {organizationQuery.isError && <button onClick={() => organizationQuery.refetch()}>Tentar novamente</button>}
+    <button onClick={onLogout}>Sair</button>
+  </section></main>;
+  return <Dashboard key={organizationQuery.data.id} auth={auth} organization={organizationQuery.data} onLogout={onLogout} onSwitchAccount={onLogout} />;
+}
+
 function App() {
   const [auth, setAuth] = useState<AuthResponse | null>(() => getStoredAuth());
-  function logout() { clearAuth(); setAuth(null); }
-  function switchAccount() { clearAuth(); setAuth(null); }
+  const queryClient = useQueryClient();
+  function logout() { queryClient.clear(); clearAuth(); setAuth(null); }
   if (!auth) return <LoginPage onAuthenticated={setAuth} />;
-  return <Dashboard auth={auth} onLogout={logout} onSwitchAccount={switchAccount} />;
+  return <Workspace auth={auth} onLogout={logout} />;
 }
 
 export default App;

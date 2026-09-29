@@ -3,7 +3,8 @@ import { Building2, Clock3, Network, UserCog, Wrench } from 'lucide-react';
 import { FormEvent, useMemo, useState } from 'react';
 import type { Incident, Machine } from './types/api';
 import type { OrganizationRole, ProviderOnboardingInput, ServiceRequestChannel, ServiceRequestPriority } from './types/serviceNetwork';
-import { acceptServiceRequest, approveServiceRequest, assignServiceRequest, cancelServiceRequest, completeServiceRequest, createOrganizationMember, createServiceRequest, declineServiceRequest, getCurrentOrganization, getMyOrganizations, getOrganizationMembers, getProviderRelationships, getProviders, getServiceRequests, markServiceRequestEnRoute, onboardProvider, setActiveOrganization, startServiceRequest, suspendProviderRelationship, trustProvider, updateOrganizationMemberRole, updateOrganizationMemberStatus, updateServiceRequestEta } from './services/serviceNetworkApi';
+import { acceptServiceRequest, approveServiceRequest, assignServiceRequest, cancelServiceRequest, completeServiceRequest, createServiceRequest, declineServiceRequest, getCurrentOrganization, getMyOrganizations, getOrganizationMembers, getProviderRelationships, getProviders, getServiceRequests, markServiceRequestEnRoute, onboardProvider, setActiveOrganization, startServiceRequest, suspendProviderRelationship, trustProvider, updateOrganizationMemberRole, updateOrganizationMemberStatus, updateServiceRequestEta } from './services/serviceNetworkApi';
+import api from './services/api';
 import { getApiErrorMessage } from './utils/apiError';
 import './service-network.css';
 
@@ -21,7 +22,7 @@ function ServiceNetworkPanel({ machines, incidents }: Props) {
   const queryClient = useQueryClient();
   const [selectedTechnician, setSelectedTechnician] = useState<Record<string, string>>({});
   const [requestDraft, setRequestDraft] = useState({ machineId: '', incidentId: '', title: '', description: '', channel: 'INTERNAL' as ServiceRequestChannel, priority: 'MEDIUM' as ServiceRequestPriority, providerOrganizationId: '' });
-  const [memberDraft, setMemberDraft] = useState({ name: '', registration: '', password: '', role: 'TECHNICIAN' as OrganizationRole });
+  const [memberDraft, setMemberDraft] = useState({ name: '', registration: '', email: '', role: 'TECHNICIAN' as OrganizationRole });
   const [providerDraft, setProviderDraft] = useState<ProviderOnboardingInput>({ name: '', slug: '', ownerName: '', ownerRegistration: '', ownerPassword: '' });
   const [providerToTrust, setProviderToTrust] = useState('');
 
@@ -70,9 +71,9 @@ function ServiceNetworkPanel({ machines, incidents }: Props) {
     },
   });
   const memberMutation = useMutation({
-    mutationFn: createOrganizationMember,
+    mutationFn: (input: typeof memberDraft) => api.post('/organization-members/invitations', input),
     onSuccess: async () => {
-      setMemberDraft({ name: '', registration: '', password: '', role: current?.type === 'SERVICE_PROVIDER' ? 'MECHANIC' : 'TECHNICIAN' });
+      setMemberDraft({ name: '', registration: '', email: '', role: current?.type === 'SERVICE_PROVIDER' ? 'MECHANIC' : 'TECHNICIAN' });
       await refreshNetwork();
     },
   });
@@ -181,9 +182,10 @@ function ServiceNetworkPanel({ machines, incidents }: Props) {
             <div className="service-section-title"><UserCog size={18} /><div><strong>Equipe do workspace</strong><small>Cadastre e gerencie os papéis desta organização.</small></div></div>
             <label>Nome<input value={memberDraft.name} onChange={(event) => setMemberDraft((draft) => ({ ...draft, name: event.target.value }))} required /></label>
             <label>Cadastro<input value={memberDraft.registration} onChange={(event) => setMemberDraft((draft) => ({ ...draft, registration: event.target.value }))} required /></label>
-            <label>Senha inicial<input type="password" minLength={8} value={memberDraft.password} onChange={(event) => setMemberDraft((draft) => ({ ...draft, password: event.target.value }))} required /></label>
+            <label>E-mail do convite<input type="email" maxLength={254} value={memberDraft.email} onChange={(event) => setMemberDraft((draft) => ({ ...draft, email: event.target.value }))} required /></label>
             <label>Papel<select value={memberDraft.role} onChange={(event) => setMemberDraft((draft) => ({ ...draft, role: event.target.value as OrganizationRole }))}>{memberRoleOptions.map((role) => <option value={role} key={role}>{roleLabel[role]}</option>)}</select></label>
-            <button className="secondary-button" type="submit" disabled={memberMutation.isPending}>Adicionar membro</button>
+            <button className="secondary-button" type="submit" disabled={memberMutation.isPending}>Enviar convite</button>
+            {memberMutation.isSuccess && <p role="status">Convite enviado. O membro define a própria senha pelo e-mail.</p>}
 
             <div className="member-management-list">
               <div className="member-management-heading"><strong>Membros atuais</strong><small>{membersQuery.data?.length ?? 0} cadastrados</small></div>

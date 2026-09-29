@@ -26,6 +26,7 @@ public class JwtService {
         return Jwts.builder()
                 .subject(user.getRegistration())
                 .claim("role", user.getRole().name())
+                .claim("credentialsVersion", user.getCredentialsChangedAt() == null ? null : user.getCredentialsChangedAt().toString())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(expirationMinutes, ChronoUnit.MINUTES)))
                 .signWith(key)
