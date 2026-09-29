@@ -42,11 +42,11 @@ public class OrganizationService {
         }
         String registration = authentication.getName();
         Optional<UUID> requestedOrganization = requestedOrganizationId();
-        OrganizationMembership membership = requestedOrganization
-                .flatMap(id -> membershipRepository.findByOrganization_IdAndUser_RegistrationIgnoreCaseAndActiveTrue(id, registration))
-                .orElseGet(() -> membershipRepository
-                        .findFirstByUser_RegistrationIgnoreCaseAndActiveTrueOrderByCreatedAtAsc(registration)
-                        .orElseThrow(() -> new AccessDeniedException("Nenhuma organização ativa disponível para este usuário.")));
+        OrganizationMembership membership = requestedOrganization.isPresent()
+                ? membershipRepository.findByOrganization_IdAndUser_RegistrationIgnoreCaseAndActiveTrue(requestedOrganization.get(), registration)
+                        .orElseThrow(() -> new AccessDeniedException("Usuário não pertence ao workspace selecionado."))
+                : membershipRepository.findFirstByUser_RegistrationIgnoreCaseAndActiveTrueOrderByCreatedAtAsc(registration)
+                        .orElseThrow(() -> new AccessDeniedException("Nenhuma organização ativa disponível para este usuário."));
         if (!membership.getOrganization().isActive()) {
             throw new AccessDeniedException("A organização selecionada está inativa.");
         }

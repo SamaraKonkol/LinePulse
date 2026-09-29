@@ -3,7 +3,7 @@ import { Activity, AlertTriangle, Factory, LogOut, Repeat2, Timer, Wrench } from
 import { useEffect, useState } from 'react';
 import AdminPanel from './AdminPanel';
 import ServiceNetworkPanel from './ServiceNetworkPanel';
-import { getCurrentOrganization, setActiveOrganization } from './services/serviceNetworkApi';
+import { getCurrentOrganization, getMyOrganizations, setActiveOrganization } from './services/serviceNetworkApi';
 import type { OrganizationSummary } from './types/serviceNetwork';
 import AlertPanel from './AlertPanel';
 import AuditPanel from './AuditPanel';
@@ -54,7 +54,8 @@ function Dashboard({ auth, organization, onLogout, onSwitchAccount }: { auth: Au
   const machinesQuery = useQuery({ queryKey: ['machines'], queryFn: getMachines });
   const workOrdersQuery = useQuery({ queryKey: ['work-orders'], queryFn: getWorkOrders });
   const downtimesQuery = useQuery({ queryKey: ['downtimes'], queryFn: getDowntimes });
-  const auditQuery = useQuery({ queryKey: ['audit-events'], queryFn: getAuditEvents, enabled: canManageOperations, refetchInterval: 15_000 });
+  const canViewAudit = organization.role !== 'OPERATOR';
+  const auditQuery = useQuery({ queryKey: ['audit-events'], queryFn: getAuditEvents, enabled: canViewAudit, refetchInterval: 15_000 });
 
   const refreshAudit = () => queryClient.invalidateQueries({ queryKey: ['audit-events'] });
   const refreshAlerts = () => queryClient.invalidateQueries({ queryKey: ['alerts'] });
@@ -147,7 +148,7 @@ function Dashboard({ auth, organization, onLogout, onSwitchAccount }: { auth: Au
     { label: 'Disponibilidade', value: dashboard ? `${dashboard.availabilityPercentage.toFixed(1)}%` : '—', icon: Activity, action: () => scrollToSection('downtime') },
     { label: 'MTTR · 30 dias', value: dashboard ? `${dashboard.mttrMinutes.toFixed(1)} min` : '—', icon: Timer, action: () => setShowMaintenanceHistory(true) },
   ];
-  const connectionError = [dashboardQuery.error, trendQuery.error, alertsQuery.error, incidentsQuery.error, machinesQuery.error, workOrdersQuery.error, downtimesQuery.error, canManageOperations ? auditQuery.error : null].find(Boolean);
+  const connectionError = [dashboardQuery.error, trendQuery.error, alertsQuery.error, incidentsQuery.error, machinesQuery.error, workOrdersQuery.error, downtimesQuery.error, canViewAudit ? auditQuery.error : null].find(Boolean);
   const mutationError = [createIncidentMutation.error, incidentTransitionMutation.error, resolveIncidentMutation.error, createWorkOrderMutation.error, workOrderTransitionMutation.error, createDowntimeMutation.error, closeDowntimeMutation.error].find(Boolean);
 
   return (
@@ -239,7 +240,7 @@ function Dashboard({ auth, organization, onLogout, onSwitchAccount }: { auth: Au
 
         <PreventiveMaintenancePanel machines={machines} isAdmin={isAdmin} />
         {showMaintenanceHistory && <MaintenanceHistoryPanel orders={orders} onClose={() => setShowMaintenanceHistory(false)} />}
-        {canManageOperations && <AuditPanel events={auditQuery.data ?? []} loading={auditQuery.isLoading} />}
+        {canViewAudit && <AuditPanel events={auditQuery.data ?? []} loading={auditQuery.isLoading} />}
         {isAdmin && <AdminPanel currentUserId={auth.user.id} machines={machines} />}
       </section>
 
@@ -262,9 +263,13 @@ function Workspace({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
     },
     retry: false,
   });
+  const availableOrganizations = useQuery({ queryKey: ['organizations'], queryFn: getMyOrganizations, enabled: organizationQuery.isError });
   if (!organizationQuery.data) return <main className="app-shell"><section className="content">
     <p>{organizationQuery.isPending ? 'Carregando workspace...' : getApiErrorMessage(organizationQuery.error, 'Não foi possível acessar o workspace.')}</p>
     {organizationQuery.isError && <button onClick={() => organizationQuery.refetch()}>Tentar novamente</button>}
+    {(availableOrganizations.data?.length ?? 0) > 0 && <label>Selecionar outro workspace<select value="" onChange={event => { setActiveOrganization(event.target.value); window.location.reload(); }}>
+      <option value="" disabled>Selecione</option>{availableOrganizations.data?.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+    </select></label>}
     <button onClick={onLogout}>Sair</button>
   </section></main>;
   return <Dashboard key={organizationQuery.data.id} auth={auth} organization={organizationQuery.data} onLogout={onLogout} onSwitchAccount={onLogout} />;

@@ -53,16 +53,23 @@ class ServiceRequestIsolationIntegrationTest {
 
     private Organization providerA;
     private Organization providerB;
+    private UUID mechanicId;
 
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
         createUser("Admin Empresa", "CMP001", UserRole.ADMIN);
+        UserAccount companyBOwner = createUser("Responsável Empresa B", "CMP002", UserRole.OPERATOR);
+        Organization companyB = organizationRepository.save(new Organization(UUID.randomUUID(), "Empresa B", "company-b-e2e", OrganizationType.COMPANY, true, Instant.now()));
+        membershipRepository.save(new OrganizationMembership(companyB, companyBOwner, OrganizationRole.OWNER, true, Instant.now()));
         UserAccount providerAOwner = createUser("Responsável A", "PRVA01", UserRole.TECHNICIAN);
         UserAccount providerBOwner = createUser("Responsável B", "PRVB01", UserRole.TECHNICIAN);
 
         providerA = createProvider("Prestador A", "prestador-a", providerAOwner);
         providerB = createProvider("Prestador B", "prestador-b", providerBOwner);
+        UserAccount mechanic = createUser("Mecânico A", "MECA01", UserRole.OPERATOR);
+        mechanicId = mechanic.getId();
+        membershipRepository.save(new OrganizationMembership(providerA, mechanic, OrganizationRole.MECHANIC, true, Instant.now()));
     }
 
     @Test
@@ -70,6 +77,8 @@ class ServiceRequestIsolationIntegrationTest {
         String companyToken = login("CMP001");
         String providerAToken = login("PRVA01");
         String providerBToken = login("PRVB01");
+        String companyBToken = login("CMP002");
+        String mechanicToken = login("MECA01");
 
         mockMvc.perform(post("/api/provider-network/relationships")
                         .header("Authorization", bearer(companyToken))
@@ -78,7 +87,10 @@ class ServiceRequestIsolationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
-        UUID machineId = createMachine(companyToken);
+        UUID machineId = createMachine(companyToken, "PR-001");
+        UUID otherMachineId = createMachine(companyBToken, "PR-B01");
+        mockMvc.perform(get("/api/machines").header("Authorization", bearer(companyToken)))
+                .andExpect(status().isOk()).andExpect(content().string(not(containsString(otherMachineId.toString()))));
         String requestResponse = mockMvc.perform(post("/api/service-requests")
                         .header("Authorization", bearer(companyToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -96,6 +108,10 @@ class ServiceRequestIsolationIntegrationTest {
                 .andExpect(jsonPath("$.status").value("REQUESTED"))
                 .andReturn().getResponse().getContentAsString();
         UUID requestId = UUID.fromString(objectMapper.readTree(requestResponse).get("id").asText());
+        mockMvc.perform(get("/api/service-requests/{id}", requestId).header("Authorization", bearer(companyBToken)))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(patch("/api/service-requests/{id}/approve", requestId).header("Authorization", bearer(companyBToken)))
+                .andExpect(status().isNotFound());
 
         mockMvc.perform(get("/api/service-requests")
                         .header("Authorization", bearer(providerAToken)))
@@ -127,18 +143,23 @@ class ServiceRequestIsolationIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         UUID workOrderId = UUID.fromString(objectMapper.readTree(accepted).get("workOrderId").asText());
 
+        mockMvc.perform(patch("/api/service-requests/{id}/assign", requestId)
+                        .header("Authorization", bearer(providerAToken)).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"technicianId\":\"" + mechanicId + "\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.assignedTechnicianId").value(mechanicId.toString()));
+
         mockMvc.perform(patch("/api/service-requests/{id}/en-route", requestId)
                         .header("Authorization", bearer(providerAToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("EN_ROUTE"));
 
         mockMvc.perform(patch("/api/service-requests/{id}/start", requestId)
-                        .header("Authorization", bearer(providerAToken)))
+                        .header("Authorization", bearer(mechanicToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
 
         mockMvc.perform(patch("/api/service-requests/{id}/complete", requestId)
-                        .header("Authorization", bearer(providerAToken))
+                        .header("Authorization", bearer(mechanicToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"serviceNotes\":\"Contator substituído\",\"partsUsed\":\"Contator 24V\"}"))
                 .andExpect(status().isOk())
@@ -156,7 +177,7 @@ class ServiceRequestIsolationIntegrationTest {
                 .andExpect(jsonPath("$.status").value("APPROVED"));
     }
 
-    private UUID createMachine(String token) throws Exception {
+    private UUID createMachine(String token, String assetCode) throws Exception {
         String plantResponse = mockMvc.perform(post("/api/admin/structure/plants")
                         .header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -188,10 +209,10 @@ class ServiceRequestIsolationIntegrationTest {
                                 {
                                   "productionLineId":"%s",
                                   "name":"Prensa 01",
-                                  "assetCode":"PR-001",
+                                  "assetCode":"%s",
                                   "status":"RUNNING"
                                 }
-                                """.formatted(lineId)))
+                                """.formatted(lineId, assetCode)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return UUID.fromString(objectMapper.readTree(machineResponse).get("id").asText());
