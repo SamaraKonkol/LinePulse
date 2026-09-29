@@ -22,6 +22,7 @@ test('invite link checks confirmation, sets password and removes token from URL'
     expect(route.request().postDataJSON()).toEqual({ token, password: 'MyNewPassword123!' });
     await route.fulfill({ json: { message: 'Senha definida. Entre com seu cadastro.' } });
   });
+  await page.addInitScript(() => localStorage.setItem('linepulse-auth-v2', JSON.stringify({ token: 'old-session', user: { id: 'existing', name: 'Existing', registration: 'EX001', role: 'ADMIN' } })));
   await page.goto(`/LinePulse/#account-token=${token}`);
   await page.getByLabel('Nova senha', { exact: true }).fill('MyNewPassword123!');
   await page.getByLabel('Confirmar senha').fill('DifferentPassword123!');

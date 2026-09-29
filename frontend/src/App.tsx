@@ -276,7 +276,10 @@ function Workspace({ auth, onLogout }: { auth: AuthResponse; onLogout: () => voi
 }
 
 function App() {
-  const [auth, setAuth] = useState<AuthResponse | null>(() => getStoredAuth());
+  const [auth, setAuth] = useState<AuthResponse | null>(() => {
+    if (window.location.hash.startsWith('#account-token=')) { clearAuth(); return null; }
+    return getStoredAuth();
+  });
   const queryClient = useQueryClient();
   function logout() { queryClient.clear(); clearAuth(); setAuth(null); }
   if (!auth) return <LoginPage onAuthenticated={setAuth} />;
