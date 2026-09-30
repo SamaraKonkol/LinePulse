@@ -3,3 +3,9 @@
 .platform-form input, .platform-form select { width: 100%; }
 .platform-form button { justify-self: start; }
 @media (max-width: 700px) { .platform-form { grid-template-columns: 1fr; } }
+.platform-shell { grid-template-columns: 1fr; }
+.platform-shell > .content { width: 100%; max-width: 1200px; margin: 0 auto; }
+.platform-shell .panel { margin-bottom: 20px; }
+.platform-shell label { display: grid; gap: 8px; color: #344139; font-size: 14px; font-weight: 600; }
+.platform-shell input, .platform-shell select { border: 1px solid #ccd7cf; border-radius: 8px; background: #fff; padding: 11px 12px; color: #17201b; }
+.sidebar button.nav-item { border: 0; background: transparent; text-align: left; cursor: pointer; }

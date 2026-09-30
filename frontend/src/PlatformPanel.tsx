@@ -27,7 +27,7 @@ export default function PlatformPanel({ onLogout }: { onLogout: () => void }) {
     setActiveOrganization(id); sessionStorage.setItem('linepulse-platform-support', 'true');
     sessionStorage.setItem('linepulse-support-role', role); client.clear(); window.location.reload();
   }
-  return <main className="app-shell"><section className="content">
+  return <main className="app-shell platform-shell"><section className="content">
     <header className="page-header"><div><span className="eyebrow">Administração da plataforma</span><h1>Organizações LinePulse</h1><p>Crie organizações, convide proprietários e acesse workspaces para suporte.</p></div><button className="secondary-button" onClick={() => { clearActiveOrganization(); onLogout(); }}>Sair</button></header>
     {(organizations.error || create.error || audit.error) && <div className="connection-banner">{getApiErrorMessage(organizations.error || create.error || audit.error, 'Não foi possível concluir a operação.')}</div>}
     {success && <p role="status">{success}</p>}
