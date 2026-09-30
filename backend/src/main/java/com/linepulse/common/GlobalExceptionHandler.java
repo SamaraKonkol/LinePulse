@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.mail.MailException.class)
+    ResponseEntity<ApiError> handleMailUnavailable(org.springframework.mail.MailException ex, HttpServletRequest request) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, "Não foi possível enviar o e-mail. Confira a configuração do provedor e tente novamente.", request);
+    }
     @ExceptionHandler(NotFoundException.class)
     ResponseEntity<ApiError> handleNotFound(NotFoundException ex, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);

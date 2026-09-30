@@ -25,6 +25,8 @@ public class UserAccount {
     private UserRole role;
 
     private boolean active;
+    private boolean platformAdmin;
+    public boolean isPlatformAdmin() { return platformAdmin; }
     private Instant createdAt;
     private Instant updatedAt;
     private Instant credentialsChangedAt;

@@ -16,6 +16,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
 public class OrganizationService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.linepulse.platform.PlatformAccess platformAccess;
     public static final String DEFAULT_SLUG = "linepulse-default";
     public static final String ORGANIZATION_HEADER = "X-LinePulse-Organization";
 
@@ -29,6 +31,11 @@ public class OrganizationService {
 
     @Transactional(readOnly = true)
     public List<OrganizationSummaryResponse> findForUser(String registration) {
+        if (platformAccess != null && platformAccess.isPlatformAdmin(registration)) {
+            platformAccess.requireAdmin();
+            return organizationRepository.findAll(org.springframework.data.domain.Sort.by("name")).stream()
+                    .filter(Organization::isActive).map(org -> new OrganizationSummaryResponse(org.getId(), org.getName(), org.getSlug(), org.getType(), OrganizationRole.OWNER)).toList();
+        }
         return membershipRepository.findByUser_RegistrationIgnoreCaseAndActiveTrueOrderByOrganization_NameAsc(registration).stream()
                 .map(OrganizationSummaryResponse::from)
                 .toList();
@@ -42,6 +49,8 @@ public class OrganizationService {
         }
         String registration = authentication.getName();
         Optional<UUID> requestedOrganization = requestedOrganizationId();
+        if (platformAccess != null && platformAccess.isPlatformAdmin(registration))
+            return platformAccess.supportMembership(requestedOrganization.orElse(null), registration).getOrganization();
         OrganizationMembership membership = requestedOrganization.isPresent()
                 ? membershipRepository.findByOrganization_IdAndUser_RegistrationIgnoreCaseAndActiveTrue(requestedOrganization.get(), registration)
                         .orElseThrow(() -> new AccessDeniedException("Usuário não pertence ao workspace selecionado."))
@@ -55,6 +64,7 @@ public class OrganizationService {
 
     @Transactional
     public void ensureDefaultMembership(UserAccount user) {
+        if (user.isPlatformAdmin()) return;
         if (membershipRepository.existsByUser_RegistrationIgnoreCase(user.getRegistration())) {
             return;
         }

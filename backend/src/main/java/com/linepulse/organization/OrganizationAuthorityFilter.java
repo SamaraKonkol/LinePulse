@@ -17,6 +17,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 public class OrganizationAuthorityFilter extends OncePerRequestFilter {
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.linepulse.platform.PlatformAccess platformAccess;
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final OrganizationMembershipRepository membershipRepository;
 
     public OrganizationAuthorityFilter(OrganizationMembershipRepository membershipRepository) {
@@ -33,6 +37,27 @@ public class OrganizationAuthorityFilter extends OncePerRequestFilter {
         }
 
         String registration = authentication.getName();
+        if (platformAccess != null && platformAccess.isPlatformAdmin(registration)) {
+            // JWT authentication must have verified the second factor before granting platform access.
+            try {
+                platformAccess.requireAdmin();
+                List<SimpleGrantedAuthority> granted = new java.util.ArrayList<>();
+                granted.add(new SimpleGrantedAuthority("ROLE_PLATFORM_ADMIN"));
+                var selected = selectedOrganizationId(request);
+                if (!isOrganizationHeaderAbsent(request)) {
+                    var support = platformAccess.supportMembership(selected.orElse(null), registration);
+                    granted.add(new SimpleGrantedAuthority(authorityFor(support)));
+                    String detail = request.getMethod() + " " + request.getRequestURI() + " role=" + support.getRole();
+                    jdbc.update("INSERT INTO platform_audit_events (actor_registration,organization_id,action,detail) VALUES (?,?,'WORKSPACE_ACCESS',?)",
+                            registration, support.getOrganization().getId(), detail.substring(0, Math.min(500, detail.length())));
+                }
+                var scoped = new UsernamePasswordAuthenticationToken(authentication.getPrincipal(), authentication.getCredentials(), granted);
+                SecurityContextHolder.getContext().setAuthentication(scoped);
+            } catch (org.springframework.security.access.AccessDeniedException denied) {
+                response.sendError(403, "Workspace ou acesso de suporte inválido."); return;
+            }
+            filterChain.doFilter(request, response); return;
+        }
         Optional<OrganizationMembership> membership = selectedOrganizationId(request)
                 .flatMap(id -> membershipRepository.findByOrganization_IdAndUser_RegistrationIgnoreCaseAndActiveTrue(id, registration));
         if (membership.isEmpty() && isOrganizationHeaderAbsent(request)) {

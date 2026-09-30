@@ -221,6 +221,7 @@ export interface AuthUser {
   name: string;
   registration: string;
   role: UserRole;
+  platformAdmin?: boolean;
 }
 
 export interface AuthResponse {

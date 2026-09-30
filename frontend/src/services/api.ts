@@ -16,6 +16,8 @@ api.interceptors.request.use((config) => {
   if (session?.token) config.headers.Authorization = `Bearer ${session.token}`;
   const organizationId = localStorage.getItem(ACTIVE_ORGANIZATION_STORAGE_KEY);
   if (organizationId) config.headers['X-LinePulse-Organization'] = organizationId;
+  const supportRole = session?.user.platformAdmin ? sessionStorage.getItem('linepulse-support-role') : null;
+  if (supportRole) config.headers['X-LinePulse-Support-Role'] = supportRole;
   return config;
 });
 
@@ -26,10 +28,10 @@ export function getStoredAuth(): AuthResponse | null {
   try { return JSON.parse(raw) as AuthResponse; } catch { localStorage.removeItem(AUTH_STORAGE_KEY); return null; }
 }
 
-export function storeAuth(auth: AuthResponse) { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth)); localStorage.removeItem(ACTIVE_ORGANIZATION_STORAGE_KEY); }
-export function clearAuth() { localStorage.removeItem(AUTH_STORAGE_KEY); localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY); localStorage.removeItem(ACTIVE_ORGANIZATION_STORAGE_KEY); }
+export function storeAuth(auth: AuthResponse) { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth)); localStorage.removeItem(ACTIVE_ORGANIZATION_STORAGE_KEY); sessionStorage.removeItem('linepulse-platform-support'); sessionStorage.removeItem('linepulse-support-role'); }
+export function clearAuth() { localStorage.removeItem(AUTH_STORAGE_KEY); localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY); localStorage.removeItem(ACTIVE_ORGANIZATION_STORAGE_KEY); sessionStorage.removeItem('linepulse-platform-support'); sessionStorage.removeItem('linepulse-support-role'); }
 
-export async function login(registration: string, password: string) { return (await api.post<AuthResponse>('/auth/login', { registration, password })).data; }
+export async function login(registration: string, password: string, otp?: string) { return (await api.post<AuthResponse>('/auth/login', { registration, password, otp })).data; }
 export async function getDashboardMetrics() { return (await api.get<DashboardMetrics>('/dashboard')).data; }
 export async function getIncidentTrend() { return (await api.get<IncidentTrendPoint[]>('/dashboard/incident-trend')).data; }
 export async function getAlerts() { return (await api.get<OperationalAlert[]>('/alerts')).data; }

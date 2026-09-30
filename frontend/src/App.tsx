@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Activity, AlertTriangle, Factory, LogOut, Repeat2, Timer, Wrench } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import AdminPanel from './AdminPanel';
+import PlatformPanel from './PlatformPanel';
 import ServiceNetworkPanel from './ServiceNetworkPanel';
 import { getCurrentOrganization, getMyOrganizations, setActiveOrganization } from './services/serviceNetworkApi';
 import type { OrganizationSummary } from './types/serviceNetwork';
@@ -165,6 +166,7 @@ function Dashboard({ auth, organization, onLogout, onSwitchAccount }: { auth: Au
           )}
         </div>
         <nav>
+          {auth.user.platformAdmin && <button className="nav-item" onClick={() => { sessionStorage.removeItem('linepulse-platform-support'); sessionStorage.removeItem('linepulse-support-role'); localStorage.removeItem('linepulse-active-organization-v3'); queryClient.clear(); window.location.reload(); }}>Voltar à plataforma</button>}
           <a className="nav-item active" href="#dashboard">Dashboard</a>
           <a className="nav-item" href="#machines">Máquinas</a>
           <a className="nav-item" href="#incidents">Ocorrências</a>
@@ -179,6 +181,7 @@ function Dashboard({ auth, organization, onLogout, onSwitchAccount }: { auth: Au
           <div><span className="eyebrow">Operações industriais</span><h1>Visão geral</h1><p>Acompanhe disponibilidade, ocorrências e manutenção da planta.</p></div>
           {isCompany && <button className="primary-button" onClick={() => setShowIncidentModal(true)} disabled={machinesQuery.isLoading || machines.length === 0}>Nova ocorrência</button>}
         </header>
+        {auth.user.platformAdmin && <div className="connection-banner" role="status">Suporte da plataforma · {organization.name} · Visão: {roleLabel[organization.role]}. Os acessos são registrados.</div>}
 
         {connectionError && <div className="connection-banner">{getApiErrorMessage(connectionError, 'Não foi possível carregar todos os dados da API.')}</div>}
         {mutationError && <div className="connection-banner">{getApiErrorMessage(mutationError, 'Uma operação não pôde ser concluída. Revise os dados e tente novamente.')}</div>}
@@ -283,6 +286,7 @@ function App() {
   const queryClient = useQueryClient();
   function logout() { queryClient.clear(); clearAuth(); setAuth(null); }
   if (!auth) return <LoginPage onAuthenticated={setAuth} />;
+  if (auth.user.platformAdmin && sessionStorage.getItem('linepulse-platform-support') !== 'true') return <PlatformPanel onLogout={logout} />;
   return <Workspace auth={auth} onLogout={logout} />;
 }
 
