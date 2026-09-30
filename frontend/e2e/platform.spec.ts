@@ -30,6 +30,7 @@ test('platform provisions owner and simulates operator without leaking authority
   await page.getByLabel('Código do autenticador', { exact: true }).fill('123456');
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Organizações LinePulse' })).toBeVisible();
+  expect((await page.locator('main > section.content').boundingBox())?.width).toBeGreaterThan(800);
   await page.getByLabel('Nome da organização').fill('Empresa Teste');
   await page.getByLabel('Identificador').fill('empresa-teste');
   await page.getByLabel('Nome do proprietário').fill('Owner');
