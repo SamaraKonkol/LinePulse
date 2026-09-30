@@ -79,7 +79,7 @@ class PlatformAdministrationIntegrationTest {
         mvc.perform(post("/api/auth/complete-account").contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(Map.of("token",capture.getValue(),"password","OwnerPassword123!")))).andExpect(status().isOk());
         mvc.perform(get("/api/organization-members").header("Authorization","Bearer "+token).header("X-LinePulse-Organization",organization))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].registration").value("OWNER"+suffix));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].registration").value(("OWNER"+suffix).toUpperCase(Locale.ROOT)));
         assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM organization_memberships m JOIN users u ON u.id=m.user_id WHERE u.platform_admin=TRUE",Integer.class));
         mvc.perform(get("/api/organizations/current").header("Authorization","Bearer "+token).header("X-LinePulse-Organization",organization).header("X-LinePulse-Support-Role","OPERATOR"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.role").value("OPERATOR"));
