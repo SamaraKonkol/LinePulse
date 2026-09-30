@@ -19,6 +19,8 @@ function LoginPage({ onAuthenticated }: Props) {
   const [accountToken, setAccountToken] = useState(() => window.location.hash.startsWith('#account-token=') ? window.location.hash.slice(15) : '');
   const [registration, setRegistration] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [showOtp, setShowOtp] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -28,14 +30,14 @@ function LoginPage({ onAuthenticated }: Props) {
     setLoading(true);
 
     try {
-      const auth = await login(registration, password);
+      const auth = await login(registration, password, otp || undefined);
       storeAuth(auth);
       onAuthenticated(auth);
     } catch (requestError: unknown) {
       const status = typeof requestError === 'object' && requestError !== null && 'response' in requestError
         ? (requestError as { response?: { status?: number } }).response?.status
         : undefined;
-      setError(status === 429 ? 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.' : 'Não foi possível entrar. Confira cadastro e senha.');
+      setError(status === 429 ? 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.' : 'Não foi possível entrar. Confira cadastro, senha e, se aplicável, código do autenticador.');
     } finally {
       setLoading(false);
     }
@@ -82,7 +84,8 @@ function LoginPage({ onAuthenticated }: Props) {
               Senha
               <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="current-password" />
             </label>
-
+            <button type="button" className="text-button" onClick={() => setShowOtp(value => !value)}>Usar código do autenticador</button>
+            {showOtp && <label>Código do autenticador<input value={otp} onChange={event => setOtp(event.target.value.replace(/\D/g, ''))} inputMode="numeric" autoComplete="one-time-code" minLength={6} maxLength={6} required /></label>}
             {error && <div className="auth-error">{error}</div>}
 
             <button className="primary-button auth-submit" disabled={loading}>

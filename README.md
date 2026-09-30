@@ -366,6 +366,8 @@ External notification delivery can later consume operational events through webh
 
 ## Status
 
+Platform administration and first-account setup: [deployment guide](docs/platform-administration.md). The platform account uses mandatory TOTP, has no tenant memberships, provisions organizations with owner invitations, and accesses support workspaces with separate audit records.
+
 **LinePulse V3 — multi-organization industrial maintenance and provider service network in active development.**
 
 Core V2 maintenance/reliability flows remain supported and are integrated with the V3 service-request lifecycle.

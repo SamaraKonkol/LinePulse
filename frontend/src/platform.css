@@ -1,0 +1,5 @@
+.platform-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
+.platform-form label { display: grid; gap: 8px; }
+.platform-form input, .platform-form select { width: 100%; }
+.platform-form button { justify-self: start; }
+@media (max-width: 700px) { .platform-form { grid-template-columns: 1fr; } }

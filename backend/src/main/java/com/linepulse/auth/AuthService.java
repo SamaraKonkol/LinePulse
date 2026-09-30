@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.linepulse.platform.PlatformTotp platformTotp;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -34,6 +36,10 @@ public class AuthService {
             throw new UnauthorizedException("Invalid registration or password");
         }
 
+        if (user.isPlatformAdmin() && !platformTotp.consume(user.getId(), request.otp())) {
+            LoginAttemptTracker.recordFailure(registration);
+            throw new UnauthorizedException("Invalid registration, password or authenticator code");
+        }
         LoginAttemptTracker.recordSuccess(registration);
         organizationService.ensureDefaultMembership(user);
         return new AuthResponse(jwtService.generate(user), AuthUserResponse.from(user));

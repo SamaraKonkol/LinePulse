@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuditService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.linepulse.platform.PlatformAccess platformAccess;
     private final AuditEventRepository auditEventRepository;
     private final OrganizationService organizationService;
 
@@ -35,6 +37,8 @@ public class AuditService {
         String actorRegistration = authentication != null && authentication.isAuthenticated()
                 ? authentication.getName()
                 : "SYSTEM";
+        if (platformAccess != null && authentication != null && platformAccess.isPlatformAdmin(authentication.getName()))
+            actorRegistration = "PLATFORM_SUPPORT";
         AuditEvent event = new AuditEvent(
                 UUID.randomUUID(), organization, action, entityType, entityId, description, actorRegistration, Instant.now()
         );

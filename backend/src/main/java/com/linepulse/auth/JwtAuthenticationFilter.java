@@ -36,12 +36,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String registration = claims.getSubject();
             userRepository.findByRegistrationIgnoreCase(registration)
                     .filter(UserAccount::isActive)
+                    .filter(user -> !user.isPlatformAdmin() || Boolean.TRUE.equals(claims.get("platformAdmin", Boolean.class)))
                     .filter(user -> user.getCredentialsChangedAt() == null || user.getCredentialsChangedAt().toString().equals(claims.get("credentialsVersion", String.class)))
                     .ifPresent(user -> {
                         var authentication = new UsernamePasswordAuthenticationToken(
                                 user.getRegistration(),
                                 null,
-                                List.of(new SimpleGrantedAuthority(user.getRole().authority()))
+                                List.of(new SimpleGrantedAuthority(user.isPlatformAdmin() ? "ROLE_PLATFORM_ADMIN" : user.getRole().authority()))
                         );
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                     });

@@ -12,6 +12,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
 public class OrganizationAccessService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.linepulse.platform.PlatformAccess platformAccess;
     private final OrganizationMembershipRepository membershipRepository;
 
     public OrganizationAccessService(OrganizationMembershipRepository membershipRepository) {
@@ -26,6 +28,8 @@ public class OrganizationAccessService {
         }
         String registration = authentication.getName();
         Optional<UUID> selected = requestedOrganizationId();
+        if (platformAccess != null && platformAccess.isPlatformAdmin(registration))
+            return platformAccess.supportMembership(selected.orElse(null), registration);
         OrganizationMembership membership = selected.isPresent()
                 ? membershipRepository.findByOrganization_IdAndUser_RegistrationIgnoreCaseAndActiveTrue(selected.get(), registration)
                         .orElseThrow(() -> new AccessDeniedException("Usuário não pertence ao workspace selecionado."))
@@ -48,6 +52,12 @@ public class OrganizationAccessService {
 
     @Transactional(readOnly = true)
     public OrganizationMembership requireMembership(UUID organizationId, String registration, OrganizationRole... allowedRoles) {
+        if (platformAccess != null && platformAccess.isPlatformAdmin(registration)) {
+            var support = platformAccess.supportMembership(organizationId, registration);
+            if (allowedRoles.length > 0 && Arrays.stream(allowedRoles).noneMatch(role -> role == support.getRole()))
+                throw new AccessDeniedException("O papel simulado não permite esta ação.");
+            return support;
+        }
         OrganizationMembership membership = membershipRepository
                 .findByOrganization_IdAndUser_RegistrationIgnoreCaseAndActiveTrue(organizationId, registration)
                 .filter(candidate -> candidate.getOrganization().isActive())
